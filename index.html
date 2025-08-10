@@ -1,0 +1,1890 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uranusfazry Meluncurkan Aplikasi Uranus WIFI & Simulasi Tata Surya</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --primary: #00eaff;
+            --secondary: #a960ff;
+            --tertiary: #ff7e5f;
+            --dark: #05051a;
+            --darker: #02020e;
+            --light: #e0faff;
+            --accent: #ff4500;
+            --danger: #ff4d4d;
+        }
+        
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Space Grotesk', 'Orbitron', sans-serif;
+            background-color: var(--dark);
+            color: var(--light);
+            touch-action: none;
+        }
+
+        .font-orbitron { 
+            font-family: 'Orbitron', sans-serif; 
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        #canvas-container canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1.5rem 1.5rem 80px; /* MODIFIED: Increased bottom padding */
+            box-sizing: border-box;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+        
+        .glass-panel {
+            background: rgba(5, 5, 26, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(224, 250, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            padding: 1.25rem;
+            pointer-events: all;
+            transition: all 0.3s ease;
+        }
+        
+        .glass-panel:hover {
+            border-color: rgba(224, 250, 255, 0.25);
+            box-shadow: 0 8px 32px rgba(0, 234, 255, 0.15);
+        }
+        
+        .control-btn {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(0, 234, 255, 0.15), rgba(169, 96, 255, 0.15));
+            border: 1px solid rgba(224, 250, 255, 0.2);
+            color: var(--primary);
+            font-size: 1.25rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+        
+        .control-btn:hover {
+            background: linear-gradient(135deg, rgba(0, 234, 255, 0.3), rgba(169, 96, 255, 0.3));
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+            color: white;
+        }
+        
+        .control-btn.active {
+            background: linear-gradient(135deg, rgba(0, 234, 255, 0.4), rgba(169, 96, 255, 0.4));
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(0, 234, 255, 0.6);
+        }
+        
+        .neon-text {
+            text-shadow: 0 0 10px rgba(0, 234, 255, 0.8), 0 0 15px rgba(0, 234, 255, 0.6);
+        }
+        
+        .neon-text-green {
+            text-shadow: 0 0 10px rgba(50, 255, 50, 0.9), 0 0 20px rgba(50, 255, 50, 0.7);
+            color: #a7ffaf;
+        }
+        
+        #boot-progress-bar {
+            background: linear-gradient(90deg, #4ade80, #86efac);
+            box-shadow: 0 0 10px #4ade80;
+            transition: width 0.5s ease-out;
+        }
+
+        .slide-in { animation: slideIn 0.5s ease-out forwards; }
+        @keyframes slideIn {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .tooltip {
+            position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%);
+            background: rgba(5, 5, 26, 0.9); color: var(--light); padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem; font-size: 0.75rem; white-space: nowrap;
+            pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 10;
+            border: 1px solid rgba(224, 250, 255, 0.15); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        .control-btn:hover .tooltip { opacity: 1; }
+        
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 2, 14, 0.9); display: flex; align-items: center;
+            justify-content: center; z-index: 1000; opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal.active { opacity: 1; pointer-events: all; }
+        
+        .modal-content {
+            background: var(--darker); border-radius: 1.5rem; padding: 2rem;
+            width: 90%; max-height: 90vh; overflow-y: auto;
+            border: 1px solid rgba(0, 234, 255, 0.25);
+            box-shadow: 0 0 30px rgba(0, 234, 255, 0.25); position: relative;
+        }
+        
+        .close-modal {
+            position: absolute; top: 1rem; right: 1rem; background: none; border: none;
+            color: var(--light); font-size: 1.5rem; cursor: pointer; transition: color 0.2s;
+        }
+        .close-modal:hover { color: var(--primary); }
+
+        .primary-btn {
+             background: linear-gradient(90deg, var(--primary), var(--secondary)); color: white;
+             padding: 0.75rem 1.5rem; border-radius: 0.5rem; border: none;
+             cursor: pointer; font-weight: bold; transition: all 0.3s ease;
+             box-shadow: 0 0 15px rgba(0, 234, 255, 0.3);
+        }
+        .primary-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 0 25px rgba(0, 234, 255, 0.5);
+        }
+
+        .package-card {
+            background: rgba(5, 5, 26, 0.5); border-radius: 0.75rem; padding: 1.5rem;
+            margin-bottom: 1rem; border: 1px solid rgba(224, 250, 255, 0.15);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .package-card:hover {
+            background: rgba(5, 5, 26, 0.7); border-color: var(--primary); transform: translateY(-2px);
+        }
+        
+        /* --- Gaya VIP Premium Baru --- */
+        .package-card-premium {
+            border-color: var(--secondary);
+            box-shadow: 0 0 20px rgba(169, 96, 255, 0.3);
+        }
+        .package-card-premium:hover {
+             box-shadow: 0 0 35px rgba(169, 96, 255, 0.5);
+             transform: translateY(-4px) scale(1.02);
+        }
+        .package-card-premium::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(
+                transparent,
+                rgba(169, 96, 255, 0.8),
+                transparent 30%
+            );
+            animation: rotate-border 4s linear infinite;
+        }
+        .package-card-premium .package-content {
+            position: relative;
+            background: var(--darker);
+            border-radius: 0.6rem;
+            padding: 1.5rem;
+            z-index: 1;
+        }
+        @keyframes rotate-border {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        .vip-badge {
+            position: absolute;
+            top: 1.5rem;
+            right: -2.5rem;
+            background: linear-gradient(45deg, var(--secondary), var(--tertiary));
+            color: white;
+            padding: 0.3rem 3rem;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-align: center;
+            transform: rotate(45deg);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            z-index: 2;
+        }
+        .vip-badge .fa-crown {
+            margin-right: 0.3rem;
+            color: #ffd700;
+        }
+        /* --- Akhir Gaya VIP --- */
+
+        .notification {
+            position: fixed; top: 1.5rem; left: 50%; transform: translateX(-50%);
+            background: rgba(5, 5, 26, 0.9); border-left: 4px solid var(--primary);
+            padding: 0.75rem 1.25rem; border-radius: 0.5rem; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            z-index: 100; display: flex; align-items: center; gap: 0.75rem;
+            animation: slideIn 0.3s ease-out; max-width: 90%; width: auto;
+        }
+        .notification i { color: var(--primary); font-size: 1.25rem; }
+
+        #journey-progress-container, #inspect-controls, #solar-system-controls, #planet-info-panel, #dashboard-controls {
+            transition: opacity 0.5s ease;
+        }
+
+        .progress-track {
+            height: 0.5rem; background: rgba(224, 250, 255, 0.1);
+            border-radius: 1rem; overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 1rem; transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 234, 255, 0.6);
+        }
+
+        .warp-effect {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(0,234,255,0.15) 0%, rgba(169,96,255,0.1) 50%, rgba(0,0,0,0) 70%);
+            pointer-events: none; z-index: 5; opacity: 0; transition: opacity 0.5s ease;
+        }
+        .warp-effect.active { opacity: 1; }
+
+        .loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; font-size: 24px; z-index: 200;
+            text-shadow: 0 0 10px var(--primary); display: none;
+        }
+
+        .planet-label {
+            position: absolute; color: white; background: rgba(0, 0, 0, 0.5);
+            padding: 2px 8px; border-radius: 5px; font-size: 12px; font-weight: bold;
+            pointer-events: none; display: none; white-space: nowrap;
+            font-family: 'Orbitron', sans-serif; z-index: 100;
+        }
+
+        /* Gaya untuk Boost Modal */
+        #boostModal .modal-content { max-width: 800px; }
+        .comparison-panel {
+            border: 1px solid;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            width: 48%;
+            transition: all 0.5s ease;
+        }
+        .panel-other-wifi {
+            border-color: rgba(255, 77, 77, 0.3);
+            background: rgba(255, 77, 77, 0.05);
+        }
+        .panel-uranus-wifi {
+            border-color: rgba(0, 234, 255, 0.3);
+            background: rgba(0, 234, 255, 0.05);
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+        .panel-uranus-wifi.active {
+            opacity: 1;
+            transform: scale(1);
+            box-shadow: 0 0 20px rgba(0, 234, 255, 0.5);
+        }
+        .status-value {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+        }
+        .buffering-icon {
+            animation: spin 1.5s linear infinite;
+        }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        
+        #solution-text {
+            opacity: 0;
+            transition: opacity 1s ease 0.5s;
+            text-shadow: 0 0 15px var(--primary), 0 0 25px var(--primary);
+        }
+        #solution-text.visible {
+            opacity: 1;
+        }
+        
+        @media (max-width: 768px) {
+            #ui-overlay { padding: 1rem 1rem 75px; } /* MODIFIED: Increased bottom padding */
+            .glass-panel { padding: 1rem; }
+            .control-btn { width: 3rem; height: 3rem; font-size: 1rem; }
+            #planet-info-panel {
+                 position: fixed; bottom: 10rem; left: 1rem; right: 1rem;
+                 top: auto; width: auto; max-width: none;
+            }
+            .comparison-container { flex-direction: column; gap: 1rem; }
+            .comparison-panel { width: 100%; }
+        }
+
+        /* --- CSS Watermark Ditambahkan --- */
+        :root {
+            /* Tema Gelap (Default) */
+            --glow-color: hsl(186, 100%, 50%);
+            --background-color: rgba(10, 25, 40, 0.85);
+            --border-color: rgba(127, 255, 212, 0.3);
+            --text-color: rgba(230, 255, 255, 0.95);
+            --particle-base-hue: 186; /* HSL Hue untuk partikel */
+            --particle-base-lightness: 60;
+        }
+
+        @keyframes slideUpFadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes logo3DFlip {
+            0% { transform: rotateY(0deg); filter: brightness(1); }
+            50% { transform: rotateY(180deg); filter: brightness(2) drop-shadow(0 0 8px var(--glow-color)); }
+            100% { transform: rotateY(360deg); filter: brightness(1); }
+        }
+        
+        #futuristic-watermark {
+            position: fixed;
+            bottom: 25px;
+            left: 25px;
+            padding: 8px 15px;
+            min-width: 212px;
+            background: var(--background-color);
+            color: var(--text-color);
+            font-family: 'Roboto Mono', monospace;
+            font-weight: 500;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(var(--glow-color), 0.15), 
+                        0 0 30px rgba(var(--glow-color), 0.1),
+                        inset 0 0 10px rgba(var(--glow-color), 0.1);
+            z-index: 9999;
+            cursor: pointer;
+            user-select: none;
+            overflow: hidden;
+            opacity: 0;
+            animation: slideUpFadeIn 1s ease-out 0.5s forwards;
+            transition: background-color 0.5s ease, color 0.5s ease, transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+        
+        #futuristic-watermark:hover {
+            transform: translateY(-5px) scale(1.03);
+            border-color: rgba(127, 255, 212, 0.8);
+            box-shadow: 0 0 25px rgba(var(--glow-color), 0.4), 
+                        0 0 50px rgba(var(--glow-color), 0.25),
+                        inset 0 0 12px rgba(var(--glow-color), 0.2);
+        }
+
+        #futuristic-watermark.light-mode {
+            --glow-color: hsl(220, 90%, 60%);
+            --background-color: rgba(245, 248, 252, 0.85);
+            --border-color: rgba(60, 100, 150, 0.3);
+            --text-color: rgba(10, 25, 40, 0.95);
+            --particle-base-hue: 220;
+            --particle-base-lightness: 40;
+        }
+        
+        #particle-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .f-content-wrapper {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 18px;
+        }
+
+        .f-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .f-content.hidden {
+            opacity: 0;
+            pointer-events: none;
+            position: absolute;
+            transform: scale(0.9);
+        }
+
+        .f-logo-container {
+            width: 18px;
+            height: 18px;
+            transition: transform 0.4s ease;
+            flex-shrink: 0;
+        }
+
+        .f-logo-container.reacting {
+            animation: logo3DFlip 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        
+        .f-logo-container svg {
+            width: 100%;
+            height: 100%;
+            stroke: var(--glow-color);
+            stroke-width: 8;
+            transition: stroke 0.5s ease;
+        }
+        
+        #f-watermark-text, #f-follow-message {
+            transition: color 0.5s ease;
+        }
+
+        #f-watermark-text {
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        #f-follow-message {
+            font-size: 11px;
+            letter-spacing: 0.2px;
+            font-weight: 700;
+            text-align: center;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <!-- Boot Screen -->
+    <div id="boot-screen" class="fixed top-0 left-0 w-full h-full bg-darker z-[2000] flex flex-col items-center justify-center transition-opacity duration-1000 ease-in-out">
+        <div class="text-center p-4">
+            <h1 class="text-3xl md:text-5xl font-bold neon-text-green font-orbitron mb-4">URANUS WIFI</h1>
+            <p class="text-lg text-green-400 mb-8">SYSTEM BOOT SEQUENCE</p>
+            <div class="w-full max-w-md mx-auto bg-gray-800/50 rounded-full h-2.5 border border-green-500/20">
+                <div id="boot-progress-bar" class="h-full rounded-full" style="width: 0%"></div>
+            </div>
+            <p id="boot-status-text" class="mt-4 text-light opacity-80 tracking-widest text-sm">INITIALIZING...</p>
+        </div>
+    </div>
+
+    <div id="canvas-container" style="opacity: 0;">
+        <div class="loading" id="loading">Memuat Tata Surya...</div>
+    </div>
+    <div id="warp-effect" class="warp-effect"></div>
+    
+    <div id="ui-overlay">
+        <!-- Dashboard Header -->
+        <div id="dashboard-header" class="glass-panel w-full max-w-2xl mx-auto hidden">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold neon-text">URANUS WIFI</h1>
+                    <p class="text-xs opacity-80">Internet Cepat, Stabil & Terjangkau</p>
+                </div>
+                <div class="hidden md:flex items-center gap-2 text-xs">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-satellite-dish text-green-400"></i>
+                        <span>KONEKSI STABIL</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-bolt text-yellow-400"></i>
+                        <span id="power-level">99% POWER</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Solar System Header -->
+        <div id="solar-system-header" class="glass-panel absolute top-6 left-6 hidden">
+            <h1 class="text-xl md:text-2xl font-bold neon-text">SIMULASI TATA SURYA</h1>
+            <p class="text-xs opacity-80">Klik planet untuk fokus & info</p>
+        </div>
+
+        <!-- Planet Info Panel -->
+        <div id="planet-info-panel" class="glass-panel absolute top-6 right-6 w-72 hidden">
+             <h2 class="text-lg font-bold mb-2 neon-text">Informasi Objek</h2>
+             <div id="planet-details" class="text-sm space-y-1">Pilih sebuah planet untuk melihat detailnya.</div>
+        </div>
+
+        <!-- Center HUD -->
+        <div id="dashboard-hud" class="flex flex-col items-center justify-center gap-4 pointer-events-none hidden">
+            <div class="glass-panel px-4 py-2 md:px-6 md:py-3 flex items-center gap-4">
+                <div class="text-center">
+                    <div class="text-xs opacity-80">DOWNLOAD</div>
+                    <div class="text-2xl font-bold neon-text" id="speed-display">99.9<span class="text-sm">Mbps</span></div>
+                </div>
+                <div class="h-8 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
+                <div class="text-center">
+                    <div class="text-xs opacity-80">UPLOAD</div>
+                    <div class="text-2xl font-bold neon-text" id="upload-display">50.5<span class="text-sm">Mbps</span></div>
+                </div>
+                <div class="h-8 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
+                <div class="text-center">
+                    <div class="text-xs opacity-80">PING</div>
+                    <div class="text-2xl font-bold neon-text" id="ping-display">8<span class="text-sm">ms</span></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bottom Controls -->
+        <div id="bottom-controls-panel" class="glass-panel w-full max-w-lg mx-auto slide-in">
+             <!-- Dashboard Controls -->
+             <div id="dashboard-controls" class="flex flex-col gap-4">
+                <div class="flex justify-between items-center">
+                    <div class="text-sm font-medium">STATUS JARINGAN</div>
+                    <div class="text-xs opacity-80">STATUS: <span id="status-text" class="text-green-400">TERHUBUNG</span></div>
+                </div>
+                <div class="flex justify-around items-center gap-2 md:gap-4">
+                    <button id="boostBtn" class="control-btn active">
+                        <i class="fas fa-bolt"></i>
+                        <span class="tooltip">Boost Koneksi</span>
+                    </button>
+                    <button id="cekPaketBtn" class="control-btn">
+                        <i class="fas fa-rocket"></i>
+                        <span class="tooltip">Cek Paket</span>
+                    </button>
+                    <button id="hubungiKamiBtn" class="control-btn">
+                        <i class="fas fa-headset"></i>
+                        <span class="tooltip">Hubungi Kami</span>
+                    </button>
+                    <button id="tentangKamiBtn" class="control-btn">
+                        <i class="fas fa-info-circle"></i>
+                        <span class="tooltip">Tentang Kami</span>
+                    </button>
+                    <button id="inspectSatelliteBtn" class="control-btn">
+                        <i class="fas fa-eye"></i>
+                        <span class="tooltip">Inspeksi Satelit</span>
+                    </button>
+                    <button id="switchToSolarBtn" class="control-btn">
+                        <i class="fas fa-satellite"></i>
+                        <span class="tooltip">Simulasi Tata Surya</span>
+                    </button>
+                </div>
+            </div>
+            <!-- Journey Progress -->
+            <div id="journey-progress-container" class="hidden opacity-0 flex flex-col gap-4">
+                 <div class="flex justify-between items-center">
+                    <div class="text-sm font-medium">BOOST PROGRESS</div>
+                    <div class="text-xs opacity-80">PHASE: <span id="phase-text">INITIALIZATION</span></div>
+                </div>
+                <div class="progress-track">
+                    <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+                </div>
+                 <div class="flex justify-center items-center gap-4">
+                     <button id="cancelBoostBtn" class="control-btn active">
+                         <i class="fas fa-times"></i>
+                         <span class="tooltip">Batalkan Boost</span>
+                    </button>
+                 </div>
+            </div>
+            <!-- Inspect Controls -->
+            <div id="inspect-controls" class="hidden flex flex-col gap-4">
+                <div class="flex justify-between items-center">
+                    <div class="text-sm font-medium">MODE INSPEKSI</div>
+                    <div class="text-xs opacity-80">Gunakan mouse untuk memutar</div>
+                </div>
+                <div class="flex justify-center items-center">
+                    <button id="exitInspectBtn" class="control-btn active">
+                        <i class="fas fa-times"></i>
+                        <span class="tooltip">Keluar Inspeksi</span>
+                    </button>
+                </div>
+            </div>
+            <!-- Solar System Controls -->
+            <div id="solar-system-controls" class="hidden flex flex-col gap-4">
+                <div class="flex justify-between items-center">
+                    <div class="text-sm font-medium">KONTROL SIMULASI</div>
+                    <div class="text-xs opacity-80">KECEPATAN: <span id="speedValue">1.0x</span></div>
+                </div>
+                <input type="range" id="speedSlider" min="0" max="10" step="0.1" value="1" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                <div class="flex justify-around items-center gap-2 md:gap-4 mt-2">
+                    <button id="playPauseBtn" class="control-btn active">
+                        <i id="playPauseIcon" class="fas fa-pause"></i>
+                        <span class="tooltip">Pause / Play</span>
+                    </button>
+                    <button id="resetViewBtn" class="control-btn">
+                        <i class="fas fa-sync-alt"></i>
+                        <span class="tooltip">Reset Tampilan</span>
+                    </button>
+                    <button id="toggleOrbitsBtn" class="control-btn active">
+                        <i class="fas fa-circle-notch"></i>
+                        <span class="tooltip">Tampilkan / Sembunyikan Orbit</span>
+                    </button>
+                    <button id="toggleLabelsBtn" class="control-btn">
+                        <i class="fas fa-tag"></i>
+                        <span class="tooltip">Tampilkan / Sembunyikan Nama Planet</span>
+                    </button>
+                     <button id="switchToDashboardBtn" class="control-btn">
+                        <i class="fas fa-satellite-dish"></i>
+                        <span class="tooltip">Kembali ke Dashboard</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notification System -->
+    <div id="notification" class="notification hidden">
+        <i class="fas fa-info-circle"></i>
+        <div>
+            <div class="font-medium">Notifikasi Sistem</div>
+            <div class="text-xs opacity-80" id="notification-message">Isi pesan di sini</div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="packagesModal" class="modal">
+        <div class="modal-content max-w-lg">
+            <button class="close-modal" data-modal="packagesModal">&times;</button>
+            <h2 class="text-xl font-bold mb-4 neon-text">PILIH PAKET ANDA</h2>
+            
+            <div class="package-card">
+                 <div class="package-content">
+                    <h3 class="font-bold text-lg text-cyan-300">Paket Internet Wireless Basic</h3>
+                    <p class="text-sm opacity-80 mb-2">Ideal untuk kebutuhan internet harian dan keluarga kecil.</p>
+                    <p class="text-2xl font-bold mb-2">Rp 300.000<span class="text-sm">/bulan</span></p>
+                    <ul class="text-xs list-disc pl-5 mb-4 space-y-1">
+                        <li>Kecepatan hingga 20 Mbps</li>
+                        <li>Kuota 500 GB</li>
+                        <li>Kapasitas Pengguna: Maksimal 5 orang</li>
+                    </ul>
+                    <button onclick="window.open('https://wa.me/6287872521809?text=Halo%2C%20saya%20tertarik%20dengan%20Paket%20Internet%20Wireless%20Basic%20seharga%20Rp%20300.000%2Fbulan.', '_blank')" class="primary-btn w-full">Pilih Paket Ini</button>
+                </div>
+            </div>
+
+            <div class="package-card package-card-premium">
+                <div class="vip-badge"><i class="fas fa-crown"></i> VIP CHOICE</div>
+                <div class="package-content">
+                    <h3 class="font-bold text-lg text-secondary">Paket Internet Wireless Premium</h3>
+                    <p class="text-sm opacity-80 mb-2">Koneksi untuk streaming, gaming, dan banyak pengguna.</p>
+                    <p class="text-2xl font-bold mb-2">Rp 400.000<span class="text-sm">/bulan</span></p>
+                    <ul class="text-xs list-disc pl-5 mb-4 space-y-1">
+                        <li>Kecepatan hingga 30 Mbps</li>
+                        <li>Kuota 500 GB</li>
+                        <li>Kapasitas Pengguna: Maksimal 10 orang</li>
+                    </ul>
+                    <button onclick="window.open('https://wa.me/6287872521809?text=Halo%2C%20saya%20tertarik%20dengan%20Paket%20Internet%20Wireless%20Premium%20seharga%20Rp%20400.000%2Fbulan.', '_blank')" class="primary-btn w-full">Pilih Paket Ini</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="contactModal" class="modal">
+        <div class="modal-content max-w-lg">
+            <button class="close-modal" data-modal="contactModal">&times;</button>
+            <h2 class="text-xl font-bold mb-4 neon-text">HUBUNGI KAMI</h2>
+            <p class="text-sm mb-4">Tim kami siap membantu Anda 24/7. Hubungi kami melalui kanal berikut:</p>
+            <div class="space-y-3 text-sm">
+                <a href="https://wa.me/6287872521809" target="_blank" class="flex items-center hover:text-primary transition-colors">
+                    <i class="fab fa-whatsapp w-6 text-green-400"></i> 0878-7252-1809
+                </a>
+                <p><i class="fas fa-phone-alt w-6 text-cyan-400"></i> 0878-7252-1809</p>
+                <p><i class="fas fa-envelope w-6 text-purple-400"></i> irawanfazry697@gmail.com</p>
+                <p><i class="fas fa-map-marker-alt w-6 text-pink-400"></i> Jl. Langkap Lancar, Lingkungan Panatasan, Kota Banjar, Jawa Barat</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="aboutModal" class="modal">
+         <div class="modal-content max-w-lg">
+            <button class="close-modal" data-modal="aboutModal">&times;</button>
+            <h2 class="text-xl font-bold mb-4 neon-text">TENTANG URANUS FAZRY</h2>
+            <p class="text-sm mb-2">Uranus Fazry lahir dari visi untuk menyediakan layanan internet wireless berkecepatan tinggi dan solusi digital (aplikasi/website) yang stabil serta terjangkau bagi semua. Kami memanfaatkan teknologi nirkabel terkini yang dapat diakses langsung dari berbagai lokasi tanpa perlu kabel fisik, sehingga koneksi tetap cepat dan andal.</p>
+            <p class="text-sm mb-4">Misi kami adalah menghubungkan setiap rumah dan bisnis di Indonesia ke dunia digital tanpa batas, dengan kemudahan akses internet di mana saja, seolah berselancar di seluruh alam semesta.</p>
+            <div class="border-t border-gray-700 pt-4 mt-4">
+                 <p class="text-xs opacity-80">© 2025 Uranus WIFI | Wireless Internet Network</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Boost Comparison Modal -->
+    <div id="boostModal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal" data-modal="boostModal">&times;</button>
+            <h2 class="text-2xl font-bold mb-6 text-center neon-text">MENGANALISA KONEKSI...</h2>
+            <div class="flex justify-center gap-4 comparison-container">
+                <!-- Panel WIFI Lain -->
+                <div id="panel-other-wifi" class="comparison-panel panel-other-wifi">
+                    <h3 class="text-lg font-bold text-red-400 mb-4 text-center">WIFI LAIN</h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between items-center">
+                            <span>Kecepatan:</span>
+                            <span id="other-speed" class="status-value text-red-400">...</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Ping:</span>
+                            <span id="other-ping" class="status-value text-red-400">...</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Status:</span>
+                            <span id="other-status" class="status-value text-red-400 flex items-center gap-2">
+                                TIDAK STABIL <i class="fas fa-exclamation-triangle"></i>
+                            </span>
+                        </div>
+                         <div class="flex justify-center items-center pt-4">
+                            <i id="other-buffer-icon" class="fas fa-sync-alt text-3xl text-red-500 opacity-0 buffering-icon"></i>
+                        </div>
+                    </div>
+                </div>
+                <!-- Panel Uranus WIFI -->
+                <div id="panel-uranus-wifi" class="comparison-panel panel-uranus-wifi">
+                    <h3 class="text-lg font-bold text-cyan-400 mb-4 text-center">URANUS WIFI</h3>
+                     <div class="space-y-3 text-sm">
+                        <div class="flex justify-between items-center">
+                            <span>Kecepatan:</span>
+                            <span id="uranus-speed" class="status-value text-cyan-300">...</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Ping:</span>
+                            <span id="uranus-ping" class="status-value text-cyan-300">...</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Status:</span>
+                            <span class="status-value text-green-400 flex items-center gap-2">
+                                SUPER STABIL <i class="fas fa-check-circle"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="solution-container" class="text-center mt-8 hidden">
+                <h2 id="solution-text" class="text-3xl font-orbitron font-bold text-cyan-300">Uranus WIFI Solusinya!</h2>
+                <button id="activateBoostBtn" class="primary-btn mt-6 hidden">AKTIFKAN BOOST SEKARANG</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- GLOBAL STATE & VARIABLES ---
+    const AppState = {
+        mode: 'dashboard', 
+        isAnimatingJourney: false,
+        journeyProgress: 0,
+        journeySpeed: 0.001,
+        isSolarSystemAnimating: true,
+        solarSystemSpeed: 1,
+        showSolarOrbits: true,
+        showSolarLabels: false,
+        focusTarget: null,
+        boostAnimationInterval: null,
+    };
+
+    let scene, camera, renderer, controls;
+    let raycaster, mouse;
+    let dashboardObjects = [];
+    let solarSystemObjects = [];
+    let solarSystemPlanets = [];
+    let solarSystemPlanetData = [];
+    let solarSystemOrbitLines = [];
+    let solarSystemPlanetLabels = [];
+    let sun;
+    let satellite, starParticles, particleNetwork, uranusGroup, wormholeGroup;
+
+
+    const originalCameraPos = new THREE.Vector3(0, 5, 15);
+    const originalControlsTarget = new THREE.Vector3(0, 0, 0);
+
+    // --- DATA ---
+    const solarSystemInfo = [
+        { name: 'Merkurius', distance: 10, size: 0.38, color: 0xA0A0A0, speed: 4.15, info: 'Planet terkecil dan terdekat dari Matahari, tanpa atmosfer signifikan.' },
+        { name: 'Venus', distance: 14, size: 0.95, color: 0xF5A530, speed: 1.62, info: 'Memiliki atmosfer tebal beracun yang memerangkap panas, menjadikannya planet terpanas.' },
+        { name: 'Bumi', distance: 19, size: 1.0, color: 0x4F79B0, speed: 1.0, info: 'Satu-satunya dunia yang kita kenal dengan lautan air cair di permukaannya.' },
+        { name: 'Mars', distance: 25, size: 0.53, color: 0xE56A6A, speed: 0.53, info: 'Dikenal sebagai "Planet Merah" karena tanahnya yang kaya akan besi oksida.' },
+        { name: 'Jupiter', distance: 40, size: 4.0, color: 0xF0E6B0, speed: 0.084, info: 'Raksasa gas terbesar dengan Bintik Merah Raksasa, badai yang lebih besar dari Bumi.' },
+        { name: 'Saturnus', distance: 55, size: 3.5, color: 0xFFD890, speed: 0.034, info: 'Dihiasi oleh sistem cincin es dan batu yang spektakuler dan kompleks.' },
+        { name: 'Uranus', distance: 70, size: 2.0, color: 0x64B5F6, speed: 0.012, info: 'Raksasa es yang berputar miring, membuatnya seolah-olah "menggelinding" di orbitnya.' },
+        { name: 'Neptunus', distance: 85, size: 1.9, color: 0x2A60E0, speed: 0.006, info: 'Dunia biru yang gelap, dingin, dan berangin sangat kencang di tepi tata surya.' }
+    ];
+
+    // --- THREE.JS INITIALIZATION ---
+    function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x02020e);
+        scene.fog = new THREE.FogExp2(0x02020e, 0.02);
+
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+        camera.position.copy(originalCameraPos);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+        renderer.shadowMap.enabled = true;
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.enableZoom = false;
+        controls.enablePan = false;
+        controls.target.copy(originalControlsTarget);
+
+        raycaster = new THREE.Raycaster();
+        mouse = new THREE.Vector2();
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(10, 10, 5);
+        scene.add(directionalLight);
+        const pointLight1 = new THREE.PointLight(0x00eaff, 1.5, 300, 2);
+        pointLight1.position.set(20, 20, 20);
+        scene.add(pointLight1);
+        const pointLight2 = new THREE.PointLight(0xa960ff, 1.5, 300, 2);
+        pointLight2.position.set(-20, -20, -20);
+        scene.add(pointLight2);
+
+        createDashboardScene();
+        
+        window.addEventListener('resize', onWindowResize);
+        
+        animate();
+    }
+
+    // --- SCENE CREATION FUNCTIONS ---
+    function clearScene() {
+        dashboardObjects.forEach(obj => scene.remove(obj));
+        dashboardObjects = [];
+        solarSystemObjects.forEach(obj => scene.remove(obj));
+        solarSystemObjects = [];
+        solarSystemPlanets = [];
+        solarSystemPlanetData = [];
+        solarSystemOrbitLines.forEach(line => scene.remove(line));
+        solarSystemOrbitLines = [];
+        solarSystemPlanetLabels.forEach(({ div }) => {
+            if (div && div.parentNode) {
+                div.parentNode.removeChild(div);
+            }
+        });
+        solarSystemPlanetLabels = [];
+        AppState.focusTarget = null;
+    }
+
+    function createDashboardScene() {
+        clearScene();
+        scene.fog = new THREE.FogExp2(0x02020e, 0.02);
+        createParticleNetwork();
+        createSatellite();
+        createStarfield();
+        createPlanet();
+        createJourneyScene();
+        dashboardObjects.push(satellite, starParticles, particleNetwork.points, particleNetwork.lineMesh, uranusGroup, wormholeGroup);
+    }
+    
+    function createParticleNetwork() {
+        const particleCount = 150;
+        const maxDistance = 25;
+        const boxSize = 100;
+        const particles = [];
+        const positions = [];
+        
+        const pMaterial = new THREE.PointsMaterial({ color: 0x00ffff, size: 0.5, blending: THREE.AdditiveBlending, transparent: true });
+        const particlesGeom = new THREE.BufferGeometry();
+
+        for (let i = 0; i < particleCount; i++) {
+            const x = (Math.random() - 0.5) * boxSize;
+            const y = (Math.random() - 0.5) * boxSize;
+            const z = (Math.random() - 0.5) * boxSize;
+            positions.push(x, y, z);
+            particles.push({
+                position: new THREE.Vector3(x, y, z),
+                velocity: new THREE.Vector3((Math.random() - 0.5) * 0.1, (Math.random() - 0.5) * 0.1, (Math.random() - 0.5) * 0.1)
+            });
+        }
+        particlesGeom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        const points = new THREE.Points(particlesGeom, pMaterial);
+
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.1 });
+        const lineGeom = new THREE.BufferGeometry();
+        const lineMesh = new THREE.LineSegments(lineGeom, lineMaterial);
+
+        particleNetwork = { points, particles, lineMesh, boxSize, maxDistance };
+        scene.add(points);
+        scene.add(lineMesh);
+    }
+    
+    function createSatellite() {
+        satellite = new THREE.Group();
+        const goldMaterial = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.9, roughness: 0.3, name: 'gold' });
+        const silverMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.4, name: 'silver' });
+        const darkMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.5, roughness: 0.6, name: 'dark' });
+        const solarPanelMaterial = new THREE.MeshStandardMaterial({ color: 0x050530, emissive: 0x00aaff, emissiveIntensity: 0.5, roughness: 0.2 });
+
+        const bodyGeom = new THREE.CylinderGeometry(1, 1, 1.5, 6);
+        const mainBody = new THREE.Mesh(bodyGeom, goldMaterial);
+        satellite.add(mainBody);
+
+        const capGeom = new THREE.CylinderGeometry(1, 1, 0.1, 6);
+        const topCap = new THREE.Mesh(capGeom, silverMaterial);
+        topCap.position.y = 0.8;
+        const bottomCap = new THREE.Mesh(capGeom, silverMaterial);
+        bottomCap.position.y = -0.8;
+        satellite.add(topCap, bottomCap);
+
+        const dishGroup = new THREE.Group();
+        const dishGeom = new THREE.SphereGeometry(1.2, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.4);
+        const dish = new THREE.Mesh(dishGeom, new THREE.MeshStandardMaterial({ color: 0xf0f0f0, metalness: 0.6, roughness: 0.3, side: THREE.DoubleSide }));
+        dishGroup.add(dish);
+
+        const feederGeom = new THREE.CylinderGeometry(0.05, 0.05, 0.5, 8);
+        const feeder = new THREE.Mesh(feederGeom, darkMaterial);
+        feeder.position.z = 0.8;
+        feeder.rotation.x = Math.PI / 2;
+        dishGroup.add(feeder);
+        
+        dishGroup.position.y = 1.2;
+        dishGroup.rotation.x = -Math.PI / 6;
+        satellite.add(dishGroup);
+
+        const solarPanelGroup = new THREE.Group();
+        const armGeom = new THREE.BoxGeometry(0.1, 0.1, 2);
+        const panelGeom = new THREE.BoxGeometry(2, 0.05, 4);
+
+        const panel1 = new THREE.Group();
+        const arm1 = new THREE.Mesh(armGeom, silverMaterial);
+        arm1.position.z = 1;
+        const solarWing1 = new THREE.Mesh(panelGeom, solarPanelMaterial);
+        solarWing1.position.z = 3;
+        panel1.add(arm1, solarWing1);
+        panel1.position.x = 1.1;
+
+        const panel2 = new THREE.Group();
+        const arm2 = new THREE.Mesh(armGeom, silverMaterial);
+        arm2.position.z = 1;
+        const solarWing2 = new THREE.Mesh(panelGeom, solarPanelMaterial);
+        solarWing2.position.z = 3;
+        panel2.add(arm2, solarWing2);
+        panel2.position.x = -1.1;
+        panel2.rotation.y = Math.PI;
+
+        solarPanelGroup.add(panel1, panel2);
+        satellite.add(solarPanelGroup);
+        
+        const thrusterGeom = new THREE.CylinderGeometry(0.4, 0.2, 0.5, 8);
+        const thruster = new THREE.Mesh(thrusterGeom, darkMaterial);
+        thruster.position.y = -1.0;
+        satellite.add(thruster);
+        
+        const engineGlowMaterial = new THREE.MeshBasicMaterial({ color: 0x00eaff, transparent: true, opacity: 1 });
+        const engineGlowGeom = new THREE.SphereGeometry(0.2, 16, 16);
+        const engineGlow = new THREE.Mesh(engineGlowGeom, engineGlowMaterial);
+        engineGlow.position.y = -1.1;
+        satellite.add(engineGlow);
+
+        satellite.position.set(0, 0, 0);
+        satellite.scale.set(1.5, 1.5, 1.5);
+        scene.add(satellite);
+    }
+
+    function createStarfield() {
+        const starGeometry = new THREE.BufferGeometry();
+        const starMaterial = new THREE.PointsMaterial({ color: 0xeeeeff, size: 0.1, transparent: true, opacity: 0.7 });
+        
+        const starPositions = [];
+        for (let i = 0; i < 5000; i++) {
+            starPositions.push((Math.random() - 0.5) * 1000, (Math.random() - 0.5) * 1000, (Math.random() - 0.5) * 1000);
+        }
+        
+        starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
+        starParticles = new THREE.Points(starGeometry, starMaterial);
+        scene.add(starParticles);
+    }
+
+    function createPlanet() {
+        uranusGroup = new THREE.Group();
+        
+        const planetGeometry = new THREE.SphereGeometry(8, 64, 64);
+        const planetMaterial = new THREE.MeshPhongMaterial({ color: 0x4F92AF, emissive: 0x2E6C8C, emissiveIntensity: 0.2, shininess: 20 });
+        const uranus = new THREE.Mesh(planetGeometry, planetMaterial);
+        uranusGroup.add(uranus);
+
+        const ringGeometry = new THREE.RingGeometry(10, 12, 64);
+        const ringMaterial = new THREE.MeshBasicMaterial({ color: 0xA0D7F0, side: THREE.DoubleSide, transparent: true, opacity: 0.7 });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.rotation.x = Math.PI / 2.2;
+        uranusGroup.add(ring);
+
+        uranusGroup.position.set(-40, 0, -60);
+        scene.add(uranusGroup);
+    }
+
+    function createJourneyScene() {
+        wormholeGroup = new THREE.Group();
+        wormholeGroup.visible = false;
+        const geometry = new THREE.TorusGeometry(15, 3, 16, 100);
+        const material = new THREE.MeshPhongMaterial({
+            color: 0x00eaff,
+            emissive: 0x0099ff,
+            emissiveIntensity: 1.0,
+            transparent: true,
+            opacity: 0.9,
+            wireframe: true
+        });
+        const wormhole = new THREE.Mesh(geometry, material);
+        wormhole.rotation.x = Math.PI / 2;
+        wormholeGroup.add(wormhole);
+
+        const debrisMaterial = new THREE.MeshPhongMaterial({ color: 0x888888 });
+        for (let i = 0; i < 150; i++) {
+            const size = 0.1 + Math.random() * 0.5;
+            const debris = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), debrisMaterial);
+            debris.position.set((Math.random() - 0.5) * 80, (Math.random() - 0.5) * 80, (Math.random() - 0.5) * 80);
+            debris.userData = {
+                velocity: new THREE.Vector3((Math.random()-0.5)*0.2, (Math.random()-0.5)*0.2, (Math.random()-0.5)*0.2),
+                rotationSpeed: new THREE.Vector3(Math.random()*0.02, Math.random()*0.02, Math.random()*0.02)
+            };
+            wormholeGroup.add(debris);
+        }
+        scene.add(wormholeGroup);
+    }
+
+    function createSolarSystemScene() {
+        clearScene();
+        scene.fog = new THREE.FogExp2(0x02020e, 0.005);
+        createSolarStarfield();
+        createSun();
+        createSolarPlanets();
+        createSolarOrbitLines();
+        solarSystemObjects.push(sun, ...solarSystemPlanets, ...solarSystemOrbitLines);
+    }
+
+    function createSolarStarfield() {
+        const vertices = [];
+        for (let i = 0; i < 10000; i++) {
+            const x = THREE.MathUtils.randFloatSpread(2000);
+            const y = THREE.MathUtils.randFloatSpread(2000);
+            const z = THREE.MathUtils.randFloatSpread(2000);
+            vertices.push(x, y, z);
+        }
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        const material = new THREE.PointsMaterial({ color: 0xeeeeff, size: 0.7, transparent: true, opacity: 0.8 });
+        const stars = new THREE.Points(geometry, material);
+        solarSystemObjects.push(stars);
+        scene.add(stars);
+    }
+
+    function createSun() {
+        const sunGeometry = new THREE.SphereGeometry(5, 64, 64);
+        const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xFFF080 });
+        sun = new THREE.Mesh(sunGeometry, sunMaterial);
+        sun.userData = { name: 'Matahari', info: 'Bintang di pusat Tata Surya, sumber utama energi bagi kehidupan di Bumi.', color: 0xFFF080 };
+        scene.add(sun);
+        
+        const sunLight = new THREE.PointLight(0xFFE0C0, 2, 1000, 2);
+        scene.add(sunLight);
+        solarSystemObjects.push(sun, sunLight);
+
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'planet-label';
+        labelDiv.textContent = sun.userData.name;
+        const glowColor = '#FFD700';
+        labelDiv.style.color = glowColor;
+        labelDiv.style.textShadow = `0 0 8px ${glowColor}, 0 0 12px ${glowColor}`;
+        labelDiv.style.display = AppState.showSolarLabels ? 'block' : 'none';
+        document.body.appendChild(labelDiv);
+        solarSystemPlanetLabels.push({ planet: sun, div: labelDiv });
+    }
+
+    function createSolarPlanets() {
+        solarSystemInfo.forEach(data => {
+            const planetGeometry = new THREE.SphereGeometry(data.size, 64, 64);
+            const planetMaterial = new THREE.MeshPhongMaterial({ color: data.color, shininess: 30 });
+            const planet = new THREE.Mesh(planetGeometry, planetMaterial);
+            planet.castShadow = true;
+            planet.receiveShadow = true;
+            planet.userData = data;
+            
+            const pivot = new THREE.Object3D();
+            pivot.add(planet);
+            scene.add(pivot);
+
+            solarSystemPlanets.push(planet);
+            solarSystemPlanetData.push({
+                planet: planet,
+                pivot: pivot,
+                distance: data.distance,
+                speed: data.speed,
+                angle: Math.random() * Math.PI * 2
+            });
+            solarSystemObjects.push(pivot);
+
+            if (data.name === 'Saturnus') {
+                const ringGeom = new THREE.RingGeometry(data.size * 1.2, data.size * 2, 64);
+                const ringMat = new THREE.MeshBasicMaterial({ color: 0xD0C4B0, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+                const ring = new THREE.Mesh(ringGeom, ringMat);
+                ring.rotation.x = Math.PI / 2;
+                planet.add(ring);
+            }
+
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'planet-label';
+            labelDiv.textContent = data.name;
+
+            const hexColor = '#' + new THREE.Color(data.color).getHexString();
+            labelDiv.style.color = hexColor;
+            labelDiv.style.textShadow = `0 0 8px ${hexColor}, 0 0 12px ${hexColor}`;
+            
+            labelDiv.style.display = AppState.showSolarLabels ? 'block' : 'none';
+            document.body.appendChild(labelDiv);
+            solarSystemPlanetLabels.push({ planet, div: labelDiv });
+        });
+    }
+
+    function createSolarOrbitLines() {
+        solarSystemInfo.forEach(data => {
+            const orbitGeom = new THREE.BufferGeometry().setFromPoints(
+                new THREE.Path().absarc(0, 0, data.distance, 0, Math.PI * 2, false).getSpacedPoints(128)
+            );
+            const orbitMat = new THREE.LineBasicMaterial({ color: 0x555555, transparent: true, opacity: 0.6 });
+            const orbit = new THREE.Line(orbitGeom, orbitMat);
+            orbit.rotation.x = Math.PI / 2;
+            orbit.visible = AppState.showSolarOrbits;
+            scene.add(orbit);
+            solarSystemOrbitLines.push(orbit);
+            solarSystemObjects.push(orbit);
+        });
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    
+    // --- ANIMATION LOOP & LOGIC ---
+    function animate() {
+        requestAnimationFrame(animate);
+
+        if (AppState.mode === 'dashboard' || AppState.mode === 'inspect' || AppState.mode === 'journey') {
+            animateDashboard();
+        } else if (AppState.mode === 'solarSystem') {
+            animateSolarSystem();
+        }
+
+        controls.update();
+        renderer.render(scene, camera);
+    }
+
+    function animateDashboard() {
+        const time = Date.now() * 0.0005;
+        if(satellite) {
+            satellite.rotation.y += 0.002;
+            satellite.rotation.x = Math.sin(time * 0.7) * 0.1;
+            satellite.position.y = Math.sin(time) * 0.2;
+        }
+        if (starParticles) starParticles.rotation.y += 0.0001;
+        if (particleNetwork) {
+            animateParticleNetwork();
+            particleNetwork.points.rotation.y += 0.0002;
+            particleNetwork.lineMesh.rotation.y += 0.0002;
+        }
+        if (uranusGroup) uranusGroup.rotation.y += 0.0005;
+
+        if (AppState.mode === 'journey') {
+             animateJourney();
+        } else if (AppState.mode === 'inspect') {
+            // No custom animation, OrbitControls handles it
+        } else {
+             updateDashboardHUD();
+        }
+    }
+
+    function animateParticleNetwork() {
+        if (!particleNetwork) return;
+        const { particles, points, lineMesh, boxSize, maxDistance } = particleNetwork;
+        const positions = points.geometry.attributes.position.array;
+        const linePositions = [];
+        const halfBox = boxSize / 2;
+
+        for (let i = 0; i < particles.length; i++) {
+            const p = particles[i];
+            p.position.add(p.velocity);
+            if (Math.abs(p.position.x) > halfBox) p.velocity.x *= -1;
+            if (Math.abs(p.position.y) > halfBox) p.velocity.y *= -1;
+            if (Math.abs(p.position.z) > halfBox) p.velocity.z *= -1;
+            positions[i * 3] = p.position.x;
+            positions[i * 3 + 1] = p.position.y;
+            positions[i * 3 + 2] = p.position.z;
+
+            for (let j = i + 1; j < particles.length; j++) {
+                const p2 = particles[j];
+                if (p.position.distanceTo(p2.position) < maxDistance) {
+                    linePositions.push(p.position.x, p.position.y, p.position.z, p2.position.x, p2.position.y, p2.position.z);
+                }
+            }
+        }
+        points.geometry.attributes.position.needsUpdate = true;
+        lineMesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+    }
+
+    function animateJourney() {
+        if(wormholeGroup) wormholeGroup.rotation.z += 0.005;
+        if (AppState.isAnimatingJourney) {
+            AppState.journeyProgress += AppState.journeySpeed;
+            if (AppState.journeyProgress >= 1) {
+                AppState.journeyProgress = 1;
+                endJourney();
+            }
+            
+            const shipPos = getBezierPoint(AppState.journeyProgress);
+            satellite.position.copy(shipPos);
+            const nextPos = getBezierPoint(Math.min(AppState.journeyProgress + 0.01, 1));
+            satellite.lookAt(nextPos);
+
+            const cameraOffset = new THREE.Vector3(0, 5, -10).applyQuaternion(satellite.quaternion);
+            camera.position.copy(satellite.position).add(cameraOffset);
+            camera.lookAt(satellite.position);
+            
+            updateJourneyUI();
+        }
+    }
+
+    function getBezierPoint(t) {
+        const p0 = new THREE.Vector3(0, 0, 0);
+        const p1 = new THREE.Vector3(20, 30, -30);
+        const p2 = new THREE.Vector3(-10, 0, -80);
+        const p3 = new THREE.Vector3(0, 0, -150);
+        const curve = new THREE.CubicBezierCurve3(p0, p1, p2, p3);
+        return curve.getPoint(t);
+    }
+    
+    function animateSolarSystem() {
+        const delta = 0.01 * AppState.solarSystemSpeed;
+        if (AppState.isSolarSystemAnimating) {
+            if(sun) sun.rotation.y += 0.001;
+            solarSystemPlanetData.forEach(data => {
+                data.angle += data.speed * delta * 0.1;
+                data.pivot.rotation.y = data.angle;
+                data.planet.position.x = data.distance;
+                data.planet.rotation.y += 0.05;
+            });
+        }
+        updateCameraFocus();
+        updateLabels();
+    }
+
+    function updateCameraFocus() {
+        if (AppState.focusTarget) {
+            const targetPosition = new THREE.Vector3();
+            AppState.focusTarget.getWorldPosition(targetPosition);
+            controls.target.lerp(targetPosition, 0.05);
+            const desiredPosition = targetPosition.clone().add(
+                new THREE.Vector3(0, 1, 2).multiplyScalar(AppState.focusTarget.geometry.parameters.radius * 3)
+            );
+            camera.position.lerp(desiredPosition, 0.05);
+        }
+    }
+
+    function updateLabels() {
+        if (!solarSystemPlanetLabels.length) return;
+
+        solarSystemPlanetLabels.forEach(({ planet, div }) => {
+            if (div.style.display === 'none' && AppState.showSolarLabels) {
+                div.style.display = 'block';
+            } else if (div.style.display === 'block' && !AppState.showSolarLabels) {
+                div.style.display = 'none';
+            }
+            if (!AppState.showSolarLabels) return;
+
+            const vector = new THREE.Vector3();
+            const planetSize = planet.geometry.parameters.radius || 5;
+            const labelOffset = new THREE.Vector3(0, planetSize * 1.5, 0);
+            planet.getWorldPosition(vector).add(labelOffset);
+            
+            vector.project(camera);
+
+            const isBehind = vector.z > 1;
+            if (isBehind) {
+                div.style.display = 'none';
+                return;
+            } else {
+                 div.style.display = 'block';
+            }
+
+            const x = (vector.x * 0.5 + 0.5) * renderer.domElement.clientWidth;
+            const y = (vector.y * -0.5 + 0.5) * renderer.domElement.clientHeight;
+
+            div.style.transform = `translate(-50%, -100%) translate(${x}px, ${y}px)`;
+        });
+    }
+
+    // --- CAMERA & UI MANAGEMENT ---
+    function animateCamera(targetPosition, targetLookAt, duration, callback) {
+        let t = 0;
+        const startPos = camera.position.clone();
+        const startLookAt = controls.target.clone();
+
+        function animate() {
+            t += 1 / (60 * duration);
+            t = Math.min(t, 1);
+            const easedT = 0.5 - 0.5 * Math.cos(t * Math.PI);
+
+            camera.position.lerpVectors(startPos, targetPosition, easedT);
+            controls.target.lerpVectors(startLookAt, targetLookAt, easedT);
+
+            if (t < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                if(callback) callback();
+            }
+        }
+        animate();
+    }
+
+    function switchMode(mode) {
+        document.getElementById('dashboard-header').classList.add('hidden');
+        document.getElementById('dashboard-hud').classList.add('hidden');
+        document.getElementById('dashboard-controls').classList.add('hidden');
+        document.getElementById('solar-system-header').classList.add('hidden');
+        document.getElementById('solar-system-controls').classList.add('hidden');
+        document.getElementById('planet-info-panel').classList.add('hidden');
+        document.getElementById('loading').style.display = 'none';
+
+        camera.position.copy(originalCameraPos);
+        controls.target.copy(originalControlsTarget);
+        controls.enableZoom = false;
+        controls.minDistance = 0;
+        controls.maxDistance = Infinity;
+
+        document.getElementById('playPauseBtn').classList.add('active');
+        document.getElementById('playPauseIcon').className = 'fas fa-pause';
+        document.getElementById('toggleOrbitsBtn').classList.add('active');
+        document.getElementById('toggleLabelsBtn').classList.remove('active');
+        
+        renderer.domElement.removeEventListener('click', onMouseClickSolarSystem);
+
+        AppState.mode = mode;
+        clearScene();
+
+        if (mode === 'dashboard') {
+            createDashboardScene();
+            document.getElementById('dashboard-header').classList.remove('hidden');
+            document.getElementById('dashboard-hud').classList.remove('hidden');
+            document.getElementById('dashboard-controls').classList.remove('hidden');
+        } else if (mode === 'solarSystem') {
+            createSolarSystemScene();
+            document.getElementById('solar-system-header').classList.remove('hidden');
+            document.getElementById('solar-system-controls').classList.remove('hidden');
+            document.getElementById('planet-info-panel').classList.remove('hidden');
+            document.getElementById('planet-details').innerHTML = 'Pilih sebuah planet untuk melihat detailnya.';
+            
+            renderer.domElement.addEventListener('click', onMouseClickSolarSystem);
+            
+            AppState.isSolarSystemAnimating = true;
+            AppState.solarSystemSpeed = 1;
+            AppState.showSolarOrbits = true;
+            AppState.showSolarLabels = false;
+            AppState.focusTarget = null;
+            document.getElementById('speedSlider').value = 1;
+            document.getElementById('speedValue').textContent = '1.0x';
+            
+            camera.position.set(0, 60, 120);
+            controls.minDistance = 5;
+            controls.maxDistance = 500;
+            controls.enableZoom = true;
+        }
+    }
+
+    function startJourney() {
+        if (AppState.mode !== 'dashboard') return;
+        AppState.mode = 'journey';
+        AppState.isAnimatingJourney = true;
+        AppState.journeyProgress = 0;
+
+        document.getElementById('dashboard-controls').classList.add('hidden');
+        const journeyUI = document.getElementById('journey-progress-container');
+        journeyUI.classList.remove('hidden');
+        setTimeout(() => journeyUI.classList.remove('opacity-0'), 50);
+        document.getElementById('warp-effect').classList.add('active');
+
+        [particleNetwork.points, particleNetwork.lineMesh, uranusGroup].forEach(obj => obj.visible = false);
+        wormholeGroup.visible = true;
+        controls.enabled = false;
+        satellite.position.set(0, 0, 0);
+        showNotification("Connection Boost Initiated! Entering quantum tunnel...");
+    }
+
+    function endJourney(cancelled = false) {
+        AppState.mode = 'dashboard';
+        AppState.isAnimatingJourney = false;
+        
+        const journeyUI = document.getElementById('journey-progress-container');
+        journeyUI.classList.add('opacity-0');
+        setTimeout(() => {
+            journeyUI.classList.add('hidden');
+            document.getElementById('dashboard-controls').classList.remove('hidden');
+        }, 500);
+        document.getElementById('warp-effect').classList.remove('active');
+
+        [particleNetwork.points, particleNetwork.lineMesh, uranusGroup].forEach(obj => obj.visible = true);
+        wormholeGroup.visible = false;
+        
+        controls.enabled = true;
+        camera.position.copy(originalCameraPos);
+        satellite.position.set(0, 0, 0);
+        satellite.rotation.set(0, 0, 0);
+        showNotification(cancelled ? "Boost dibatalkan. Kembali ke operasi normal." : "Boost selesai! Koneksi dioptimalkan.");
+    }
+
+    function startInspection() {
+        if (AppState.mode !== 'dashboard') return;
+        AppState.mode = 'inspect';
+
+        document.getElementById('dashboard-controls').classList.add('hidden');
+        document.getElementById('inspect-controls').classList.remove('hidden');
+
+        const targetPos = new THREE.Vector3().copy(satellite.position).add(new THREE.Vector3(0, 1, 5));
+        const targetLookAt = satellite.position;
+        
+        animateCamera(targetPos, targetLookAt, 1.5, () => {
+            controls.enableZoom = true;
+            controls.minDistance = 3;
+            controls.maxDistance = 10;
+        });
+
+        showNotification("Mode Inspeksi: Putar satelit dengan mouse.");
+    }
+
+    function endInspection() {
+        AppState.mode = 'dashboard';
+
+        document.getElementById('inspect-controls').classList.add('hidden');
+        document.getElementById('dashboard-controls').classList.remove('hidden');
+        
+        controls.enableZoom = false;
+        
+        animateCamera(originalCameraPos, originalControlsTarget, 1.5);
+    }
+    
+    // --- UI LOGIC ---
+    function stopEventPropagationOnUI(element) {
+        if (!element) return;
+        const stopPropagation = (e) => e.stopPropagation();
+        element.addEventListener('mousedown', stopPropagation);
+        element.addEventListener('mouseup', stopPropagation);
+        element.addEventListener('mousemove', stopPropagation);
+        element.addEventListener('touchstart', stopPropagation);
+        element.addEventListener('touchend', stopPropagation);
+        element.addEventListener('touchmove', stopPropagation);
+    }
+
+    function initUI() {
+        document.getElementById('cekPaketBtn').addEventListener('click', () => openModal('packagesModal'));
+        document.getElementById('hubungiKamiBtn').addEventListener('click', () => openModal('contactModal'));
+        document.getElementById('tentangKamiBtn').addEventListener('click', () => openModal('aboutModal'));
+        document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                closeModal(btn.dataset.modal);
+                if (btn.dataset.modal === 'boostModal') {
+                    if (AppState.boostAnimationInterval) clearInterval(AppState.boostAnimationInterval);
+                }
+            });
+        });
+        
+        // New Boost Logic
+        document.getElementById('boostBtn').addEventListener('click', () => {
+            openModal('boostModal');
+            startBoostAnimation();
+        });
+        document.getElementById('activateBoostBtn').addEventListener('click', () => {
+            closeModal('boostModal');
+            startJourney();
+        });
+
+
+        document.getElementById('cancelBoostBtn').addEventListener('click', () => endJourney(true));
+        document.getElementById('inspectSatelliteBtn').addEventListener('click', startInspection);
+        document.getElementById('exitInspectBtn').addEventListener('click', endInspection);
+
+        document.getElementById('playPauseBtn').addEventListener('click', toggleAnimationSolarSystem);
+        document.getElementById('resetViewBtn').addEventListener('click', resetViewSolarSystem);
+        document.getElementById('toggleOrbitsBtn').addEventListener('click', toggleOrbitsSolarSystem);
+        document.getElementById('toggleLabelsBtn').addEventListener('click', toggleLabelsSolarSystem);
+        document.getElementById('speedSlider').addEventListener('input', (e) => changeSpeedSolarSystem(e.target.value));
+
+        document.getElementById('switchToSolarBtn').addEventListener('click', () => switchMode('solarSystem'));
+        document.getElementById('switchToDashboardBtn').addEventListener('click', () => switchMode('dashboard'));
+
+        renderer.domElement.addEventListener('click', onMouseClickSolarSystem);
+
+        stopEventPropagationOnUI(document.getElementById('bottom-controls-panel'));
+        stopEventPropagationOnUI(document.getElementById('solar-system-header'));
+        stopEventPropagationOnUI(document.getElementById('planet-info-panel'));
+        stopEventPropagationOnUI(document.getElementById('dashboard-header'));
+        document.querySelectorAll('.modal-content').forEach(stopEventPropagationOnUI);
+    }
+
+    // --- BOOST MODAL ANIMATION ---
+    function startBoostAnimation() {
+        // Reset UI
+        if (AppState.boostAnimationInterval) clearInterval(AppState.boostAnimationInterval);
+        document.getElementById('panel-uranus-wifi').classList.remove('active');
+        document.getElementById('solution-container').classList.add('hidden');
+        document.getElementById('solution-text').classList.remove('visible');
+        document.getElementById('activateBoostBtn').classList.add('hidden');
+        document.getElementById('other-buffer-icon').classList.add('opacity-0');
+        document.getElementById('uranus-speed').textContent = '...';
+        document.getElementById('uranus-ping').textContent = '...';
+
+        let elapsedTime = 0;
+        const duration = 5000; // 5 seconds for the comparison
+        const interval = 100;
+
+        AppState.boostAnimationInterval = setInterval(() => {
+            elapsedTime += interval;
+
+            // Animate "Other WIFI"
+            const speed = 2 + Math.random() * 5;
+            const ping = 80 + Math.sin(elapsedTime / 500) * 40 + Math.random() * 20;
+            document.getElementById('other-speed').textContent = `${speed.toFixed(2)} Mbps`;
+            document.getElementById('other-ping').textContent = `${ping.toFixed(0)} ms`;
+            
+            if (elapsedTime > 2000 && Math.random() > 0.7) {
+                 document.getElementById('other-buffer-icon').classList.remove('opacity-0');
+            } else {
+                 document.getElementById('other-buffer-icon').classList.add('opacity-0');
+            }
+
+
+            if (elapsedTime >= duration) {
+                clearInterval(AppState.boostAnimationInterval);
+                finishBoostAnimation();
+            }
+        }, interval);
+    }
+
+    function finishBoostAnimation() {
+        document.getElementById('other-speed').textContent = `0.00 Mbps`;
+        document.getElementById('other-ping').textContent = `- ms`;
+        document.getElementById('other-status').innerHTML = `KONEKSI TERPUTUS <i class="fas fa-times-circle"></i>`;
+        document.getElementById('other-buffer-icon').classList.add('opacity-0');
+
+        setTimeout(() => {
+            document.getElementById('panel-uranus-wifi').classList.add('active');
+            document.getElementById('uranus-speed').textContent = '30 Mbps';
+            document.getElementById('uranus-ping').textContent = '8 ms';
+            document.getElementById('solution-container').classList.remove('hidden');
+            
+            setTimeout(() => {
+                document.getElementById('solution-text').classList.add('visible');
+                document.getElementById('activateBoostBtn').classList.remove('hidden');
+            }, 500);
+        }, 500);
+    }
+    
+    function onMouseClickSolarSystem(event) {
+        if (AppState.mode !== 'solarSystem') return;
+        
+        if (event.target !== renderer.domElement) return;
+
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+
+        const intersects = raycaster.intersectObjects([...solarSystemPlanets, sun]);
+        if (intersects.length > 0) {
+            const target = intersects[0].object;
+            focusOnPlanet(target);
+        }
+    }
+
+    function focusOnPlanet(planetObject) {
+        AppState.focusTarget = planetObject;
+        showPlanetInfo(planetObject.userData);
+    }
+
+    function showPlanetInfo(data) {
+        const infoDiv = document.getElementById('planet-details');
+        const colorHex = '#' + new THREE.Color(data.color).getHexString();
+        infoDiv.innerHTML = `
+            <h3 class="font-bold text-base" style="color:${colorHex}; text-shadow: 0 0 5px ${colorHex};">${data.name}</h3>
+            <p class="opacity-80">${data.info}</p>
+        `;
+    }
+
+    function toggleAnimationSolarSystem() {
+        AppState.isSolarSystemAnimating = !AppState.isSolarSystemAnimating;
+        const btn = document.getElementById('playPauseBtn');
+        const icon = document.getElementById('playPauseIcon');
+        btn.classList.toggle('active', AppState.isSolarSystemAnimating);
+        icon.className = AppState.isSolarSystemAnimating ? 'fas fa-pause' : 'fas fa-play';
+    }
+
+    function resetViewSolarSystem() {
+        AppState.focusTarget = null;
+        controls.target.set(0, 0, 0);
+        animateCamera(new THREE.Vector3(0, 60, 120), new THREE.Vector3(0,0,0), 1.5);
+    }
+
+    function toggleOrbitsSolarSystem() {
+        AppState.showSolarOrbits = !AppState.showSolarOrbits;
+        solarSystemOrbitLines.forEach(orbit => orbit.visible = AppState.showSolarOrbits);
+        document.getElementById('toggleOrbitsBtn').classList.toggle('active', AppState.showSolarOrbits);
+    }
+
+    function toggleLabelsSolarSystem() {
+        AppState.showSolarLabels = !AppState.showSolarLabels;
+        document.getElementById('toggleLabelsBtn').classList.toggle('active', AppState.showSolarLabels);
+    }
+
+    function changeSpeedSolarSystem(value) {
+        AppState.solarSystemSpeed = parseFloat(value);
+        document.getElementById('speedValue').textContent = AppState.solarSystemSpeed.toFixed(1) + 'x';
+    }
+
+    function openModal(modalId) { document.getElementById(modalId).classList.add('active'); }
+    function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
+    
+    function showNotification(message) {
+        const notification = document.getElementById('notification');
+        document.getElementById('notification-message').textContent = message;
+        notification.classList.remove('hidden');
+        setTimeout(() => notification.classList.add('hidden'), 3000);
+    }
+
+    function updateDashboardHUD() {
+        const time = Date.now() * 0.002;
+        const downloadSpeed = 95 + Math.sin(time) * 5;
+        const uploadSpeed = 48 + Math.cos(time) * 2.5;
+        const ping = 8 + Math.round(Math.sin(time * 1.5) * 2);
+
+        document.getElementById('speed-display').innerHTML = `${downloadSpeed.toFixed(1)}<span class="text-sm">Mbps</span>`;
+        document.getElementById('upload-display').innerHTML = `${uploadSpeed.toFixed(1)}<span class="text-sm">Mbps</span>`;
+        document.getElementById('ping-display').innerHTML = `${ping}<span class="text-sm">ms</span>`;
+        document.getElementById('status-text').textContent = "TERHUBUNG";
+        document.getElementById('status-text').className = "text-green-400";
+    }
+
+    function updateJourneyUI() {
+        const progress = AppState.journeyProgress;
+        document.getElementById('progress-bar').style.width = `${progress * 100}%`;
+        
+        let phase = "ACCELERATION";
+        if (progress > 0.8) phase = "STABILIZATION";
+        else if (progress > 0.3) phase = "CRUISE";
+        document.getElementById('phase-text').textContent = phase;
+
+        const speed = 500 + progress * 5000;
+        const latency = Math.max(1, 8 - progress * 7);
+        const data = progress * 1000;
+        
+        document.getElementById('speed-display').innerHTML = `${speed.toFixed(0)}<span class="text-sm">Gbps</span>`;
+        document.getElementById('upload-display').innerHTML = `${data.toFixed(0)}<span class="text-sm">TB</span>`;
+        document.getElementById('ping-display').innerHTML = `${latency.toFixed(1)}<span class="text-sm">ms</span>`;
+        document.getElementById('status-text').textContent = "BOOSTING...";
+        document.getElementById('status-text').className = "text-yellow-400";
+    }
+
+    // --- BOOT SEQUENCE ---
+    function bootSystem() {
+        const progressBar = document.getElementById('boot-progress-bar');
+        const statusText = document.getElementById('boot-status-text');
+        const bootScreen = document.getElementById('boot-screen');
+        const mainUI = document.getElementById('ui-overlay');
+        const canvasContainer = document.getElementById('canvas-container');
+
+        const steps = [
+            { progress: 10, text: 'POWERING UP CORE SYSTEMS...' },
+            { progress: 25, text: 'LOADING INTERPLANETARY DRIVERS...' },
+            { progress: 40, text: 'ESTABLISHING SATELLITE HANDSHAKE...' },
+            { progress: 65, text: 'CALIBRATING WARP ANTENNA...' },
+            { progress: 80, text: 'SYNCING WITH URANUS MAIN HUB...' },
+            { progress: 95, text: 'FINALIZING CONNECTION...' },
+            { progress: 100, text: 'SYSTEM ONLINE. WELCOME.' },
+        ];
+
+        let currentStep = 0;
+
+        function nextStep() {
+            if (currentStep >= steps.length) {
+                bootScreen.classList.add('opacity-0');
+            
+                setTimeout(() => {
+                    bootScreen.style.display = 'none';
+                    mainUI.style.opacity = '1';
+                    canvasContainer.style.opacity = '1';
+                    document.getElementById('dashboard-header').classList.remove('hidden');
+                    document.getElementById('dashboard-hud').classList.remove('hidden');
+                    document.getElementById('dashboard-controls').classList.remove('hidden');
+                }, 1000);
+                return;
+            }
+
+            const step = steps[currentStep];
+            progressBar.style.width = `${step.progress}%`;
+            statusText.textContent = step.text;
+            currentStep++;
+
+            setTimeout(nextStep, 400 + Math.random() * 250);
+        }
+
+        setTimeout(nextStep, 500);
+    }
+
+    // --- INITIALIZATION ---
+    document.addEventListener('DOMContentLoaded', () => {
+        init();
+        initUI();
+        bootSystem();
+    });
+
+</script>
+
+<!-- Script Watermark Ditambahkan -->
+<script>
+  (function() {
+    function initializeWatermark() {
+        const watermarkHTML = `
+          <div id="futuristic-watermark" title="Design by ©URANUSFAZRY">
+            <canvas id="particle-canvas"></canvas>
+            <div class="f-content-wrapper">
+              <div id="f-main-content" class="f-content">
+                <div class="f-logo-container">
+                  <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 20 L80 20 L80 80 L20 80 Z" stroke-opacity="0.5"/>
+                      <path d="M50 5 L95 50 L50 95 L5 50 Z"/>
+                  </svg>
+                </div>
+                <span id="f-watermark-text">©URANUSFAZRY</span>
+              </div>
+              <div id="f-follow-content" class="f-content hidden">
+                  <span id="f-follow-message"></span>
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', watermarkHTML);
+
+        const watermarkEl = document.getElementById('futuristic-watermark');
+        const textEl = document.getElementById('f-watermark-text');
+        const logoEl = watermarkEl.querySelector('.f-logo-container');
+        const mainContentEl = document.getElementById('f-main-content');
+        const followContentEl = document.getElementById('f-follow-content');
+        const followMessageEl = document.getElementById('f-follow-message');
+        
+        let isAnimating = false;
+        let autoPlayInterval = null;
+        let currentSequence = 0;
+        const sequenceActions = ['scramble', 'logo', 'youtube', 'tiktok', 'reset'];
+
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        const resizeCanvas = () => { if (watermarkEl) { canvas.width = watermarkEl.offsetWidth; canvas.height = watermarkEl.offsetHeight; } };
+        class Particle {
+            constructor() { this.reset(); this.baseSpeedX = (Math.random() - 0.5) * 0.5; this.baseSpeedY = (Math.random() - 0.5) * 0.5; this.speedX = this.baseSpeedX; this.speedY = this.baseSpeedY; }
+            update() {
+                this.x += this.speedX; this.y += this.speedY; this.opacity -= this.fadeSpeed;
+                if (this.opacity <= 0 || this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) { this.reset(); }
+            }
+            draw() {
+                const style = getComputedStyle(watermarkEl);
+                const hue = style.getPropertyValue('--particle-base-hue').trim();
+                const lightness = parseFloat(style.getPropertyValue('--particle-base-lightness').trim());
+                ctx.globalAlpha = this.opacity;
+                ctx.fillStyle = `hsl(${hue}, 100%, ${lightness + this.opacity * 40}%)`;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+            }
+            reset() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.opacity = Math.random() * 0.5 + 0.2; this.size = Math.random() * 1.5 + 0.5; this.fadeSpeed = Math.random() * 0.015 + 0.005; }
+        }
+        const animateParticles = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); particles.forEach(p => { p.update(); p.draw(); }); ctx.globalAlpha = 1.0; requestAnimationFrame(animateParticles); };
+        
+        const textScramble = (el) => {
+            const originalText = "©URANUSFAZRY";
+            const chars = '!<>*#{}[]'; let frame = 0; isAnimating = true;
+            const interval = setInterval(() => {
+                el.innerText = originalText.split('').map((char, i) => { const p = (frame - i * 2) / 15; if (p < 0) return ' '; if (p > 1) return char; return chars[Math.floor(Math.random() * chars.length)]; }).join('');
+                if (frame >= originalText.length * 2 + 15) { clearInterval(interval); el.innerText = originalText; isAnimating = false; } frame++;
+            }, 30);
+        };
+
+        const typewriter = (el, text) => {
+            let i = 0; el.innerHTML = ""; isAnimating = true;
+            const interval = setInterval(() => {
+                if (i < text.length) { el.innerHTML += text.charAt(i); i++; } 
+                else { clearInterval(interval); isAnimating = false; }
+            }, 50);
+        };
+
+        const runAutoSequence = () => {
+            if (isAnimating) return;
+            const action = sequenceActions[currentSequence];
+            switch (action) {
+                case 'scramble': textScramble(textEl); break;
+                case 'logo':
+                    isAnimating = true;
+                    logoEl.classList.add('reacting');
+                    logoEl.addEventListener('animationend', () => { logoEl.classList.remove('reacting'); isAnimating = false; }, { once: true });
+                    break;
+                case 'youtube':
+                    isAnimating = true;
+                    mainContentEl.classList.add('hidden');
+                    setTimeout(() => {
+                        followContentEl.classList.remove('hidden');
+                        typewriter(followMessageEl, "Follow uranusfazry YouTube");
+                    }, 400);
+                    break;
+                case 'tiktok': 
+                    typewriter(followMessageEl, "Follow uranusfazry TikTok"); 
+                    break;
+                case 'reset':
+                    isAnimating = true;
+                    followContentEl.classList.add('hidden');
+                    setTimeout(() => {
+                        mainContentEl.classList.remove('hidden');
+                        isAnimating = false;
+                    }, 400);
+                    break;
+            }
+            currentSequence = (currentSequence + 1) % sequenceActions.length;
+        };
+
+        const startAutoPlay = () => {
+            if (autoPlayInterval) clearInterval(autoPlayInterval);
+            runAutoSequence();
+            autoPlayInterval = setInterval(runAutoSequence, 3500);
+        };
+
+        watermarkEl.addEventListener('click', () => { watermarkEl.classList.toggle('light-mode'); });
+        
+        const init = () => {
+            resizeCanvas();
+            for (let i = 0; i < 40; i++) particles.push(new Particle());
+            animateParticles();
+            window.addEventListener('resize', resizeCanvas);
+            startAutoPlay();
+        };
+        init();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeWatermark);
+    } else {
+        initializeWatermark();
+    }
+  })();
+</script>
+</body>
+</html>
+
