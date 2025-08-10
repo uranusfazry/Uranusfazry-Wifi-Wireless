@@ -1,4 +1,4 @@
-# 📡 Uranus Fazry – Internet Wireless Tanpa Kabel
+# 📡 Uranusfazry – Internet Wireless Tanpa Kabel
 
 **Uranus Fazry** adalah penyedia layanan **Internet Wireless** cepat dan stabil, tanpa memerlukan kabel fiber optik.  
 Cocok untuk rumah, kantor, maupun usaha kecil yang membutuhkan koneksi andal dan praktis.
