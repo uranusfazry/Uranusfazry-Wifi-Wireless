@@ -799,7 +799,7 @@
     let solarSystemOrbitLines = [];
     let solarSystemPlanetLabels = [];
     let sun;
-    let satellite, starParticles, particleNetwork, uranusGroup, wormholeGroup;
+    let satellite, starParticles, particleNetwork, earthGroup, wormholeGroup;
 
 
     const originalCameraPos = new THREE.Vector3(0, 5, 15);
@@ -820,17 +820,21 @@
     // --- THREE.JS INITIALIZATION ---
     function init() {
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x02020e);
-        scene.fog = new THREE.FogExp2(0x02020e, 0.02);
+        scene.background = new THREE.Color(0x02020e); // Deep space color
+        scene.fog = new THREE.FogExp2(0x02020e, 0.015);
 
-        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 10000);
         camera.position.copy(originalCameraPos);
 
+        const canvasContainer = document.getElementById('canvas-container');
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        document.getElementById('canvas-container').appendChild(renderer.domElement);
-        renderer.shadowMap.enabled = true;
+        canvasContainer.appendChild(renderer.domElement);
+        renderer.shadowMap.enabled = true; // Enable shadows
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
 
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
@@ -842,18 +846,25 @@
         raycaster = new THREE.Raycaster();
         mouse = new THREE.Vector2();
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+        // --- Cinematic Lighting Setup ---
+        const ambientLight = new THREE.AmbientLight(0x405080, 0.4); // Cool ambient light
         scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        directionalLight.position.set(10, 10, 5);
-        scene.add(directionalLight);
-        const pointLight1 = new THREE.PointLight(0x00eaff, 1.5, 300, 2);
-        pointLight1.position.set(20, 20, 20);
-        scene.add(pointLight1);
-        const pointLight2 = new THREE.PointLight(0xa960ff, 1.5, 300, 2);
-        pointLight2.position.set(-20, -20, -20);
-        scene.add(pointLight2);
 
+        // Main sun light
+        const sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
+        sunLight.position.set(10, 5, 10);
+        sunLight.castShadow = true; // This light casts shadows
+        sunLight.shadow.mapSize.width = 4096; // Increased shadow map resolution for 4K quality
+        sunLight.shadow.mapSize.height = 4096; // Increased shadow map resolution for 4K quality
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 50;
+        scene.add(sunLight);
+
+        // Fill light for softer shadows
+        const fillLight = new THREE.DirectionalLight(0x80aaff, 0.5);
+        fillLight.position.set(-10, 2, -5);
+        scene.add(fillLight);
+        
         createDashboardScene();
         
         window.addEventListener('resize', onWindowResize);
@@ -882,13 +893,13 @@
 
     function createDashboardScene() {
         clearScene();
-        scene.fog = new THREE.FogExp2(0x02020e, 0.02);
+        scene.fog = new THREE.FogExp2(0x02020e, 0.015);
         createParticleNetwork();
-        createSatellite();
+        createSatellite(); // Calls the new, upgraded function
         createStarfield();
-        createPlanet();
+        createEarth(); // Calls the new, 4K version
         createJourneyScene();
-        dashboardObjects.push(satellite, starParticles, particleNetwork.points, particleNetwork.lineMesh, uranusGroup, wormholeGroup);
+        dashboardObjects.push(satellite, starParticles, particleNetwork.points, particleNetwork.lineMesh, earthGroup, wormholeGroup);
     }
     
     function createParticleNetwork() {
@@ -923,86 +934,170 @@
         scene.add(lineMesh);
     }
     
+    // --- UPDATED: MORE COLORFUL SATELLITE ---
     function createSatellite() {
         satellite = new THREE.Group();
-        const goldMaterial = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.9, roughness: 0.3, name: 'gold' });
-        const silverMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.4, name: 'silver' });
-        const darkMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.5, roughness: 0.6, name: 'dark' });
-        const solarPanelMaterial = new THREE.MeshStandardMaterial({ color: 0x050530, emissive: 0x00aaff, emissiveIntensity: 0.5, roughness: 0.2 });
 
-        const bodyGeom = new THREE.CylinderGeometry(1, 1, 1.5, 6);
-        const mainBody = new THREE.Mesh(bodyGeom, goldMaterial);
-        satellite.add(mainBody);
+        // --- Create procedural textures for detail ---
+        const bodyBumpCanvas = document.createElement('canvas');
+        bodyBumpCanvas.width = 512;
+        bodyBumpCanvas.height = 512;
+        const ctxBump = bodyBumpCanvas.getContext('2d');
+        ctxBump.fillStyle = 'rgb(128, 128, 128)';
+        ctxBump.fillRect(0, 0, 512, 512);
+        ctxBump.strokeStyle = 'rgb(160, 160, 160)';
+        ctxBump.lineWidth = 8;
+        for (let i = 0; i < 512; i += 64) {
+            ctxBump.beginPath(); ctxBump.moveTo(i, 0); ctxBump.lineTo(i, 512); ctxBump.stroke();
+            ctxBump.beginPath(); ctxBump.moveTo(0, i); ctxBump.lineTo(512, i); ctxBump.stroke();
+        }
+        const bodyBumpMap = new THREE.CanvasTexture(bodyBumpCanvas);
+        bodyBumpMap.wrapS = THREE.RepeatWrapping;
+        bodyBumpMap.wrapT = THREE.RepeatWrapping;
 
-        const capGeom = new THREE.CylinderGeometry(1, 1, 0.1, 6);
-        const topCap = new THREE.Mesh(capGeom, silverMaterial);
-        topCap.position.y = 0.8;
-        const bottomCap = new THREE.Mesh(capGeom, silverMaterial);
-        bottomCap.position.y = -0.8;
-        satellite.add(topCap, bottomCap);
+        const solarCanvas = document.createElement('canvas');
+        solarCanvas.width = 512;
+        solarCanvas.height = 1024;
+        const ctxSolar = solarCanvas.getContext('2d');
+        ctxSolar.fillStyle = '#0a0a2a';
+        ctxSolar.fillRect(0, 0, 512, 1024);
+        ctxSolar.strokeStyle = '#00eaff';
+        ctxSolar.lineWidth = 3;
+        for (let i = 0; i < 512; i += 32) {
+            ctxSolar.beginPath(); ctxSolar.moveTo(i, 0); ctxSolar.lineTo(i, 1024); ctxSolar.stroke();
+        }
+        for (let j = 0; j < 1024; j += 32) {
+            ctxSolar.beginPath(); ctxSolar.moveTo(0, j); ctxSolar.lineTo(512, j); ctxSolar.stroke();
+        }
+        const solarPanelTexture = new THREE.CanvasTexture(solarCanvas);
+        
+        // --- Materials (More Colorful) ---
+        const mainBodyMaterial = new THREE.MeshStandardMaterial({
+            color: 0x4a4a8a, // Deep space blue/purple
+            metalness: 0.9, roughness: 0.4,
+            bumpMap: bodyBumpMap, bumpScale: 0.01,
+            emissive: 0x101020, // Slight blue glow
+        });
+        const accentMaterial = new THREE.MeshStandardMaterial({
+            color: 0x9c27b0, // Vibrant purple
+            metalness: 0.95, roughness: 0.2
+        });
+        const goldFoilMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffc107, // Amber gold
+            metalness: 1.0, roughness: 0.3,
+            emissive: 0xffc107,
+            emissiveIntensity: 0.2
+        });
+        const solarCellMaterial = new THREE.MeshStandardMaterial({
+            map: solarPanelTexture, metalness: 0.2, roughness: 0.3,
+            emissive: 0x00ffff, // Bright cyan emissive
+            emissiveMap: solarPanelTexture, 
+            emissiveIntensity: 0.8 // Increased intensity
+        });
+        const dishMaterial = new THREE.MeshStandardMaterial({
+            color: 0xb0e0e6, // Powder blue
+            metalness: 1.0, roughness: 0.1, side: THREE.DoubleSide
+        });
+        const blackAccentMaterial = new THREE.MeshStandardMaterial({
+            color: 0x050505, roughness: 0.1, metalness: 0.1
+        });
+
+        // --- Build Satellite Components ---
+        const bodyGroup = new THREE.Group();
+        const mainCylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 2.5, 16), mainBodyMaterial);
+        mainCylinder.castShadow = true; mainCylinder.receiveShadow = true;
+        bodyGroup.add(mainCylinder);
+        const topCone = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.8, 0.4, 16), accentMaterial);
+        topCone.position.y = 1.45;
+        bodyGroup.add(topCone);
+        const bottomPart = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.7, 0.5, 16), goldFoilMaterial);
+        bottomPart.position.y = -1.5;
+        bodyGroup.add(bottomPart);
+        satellite.add(bodyGroup);
 
         const dishGroup = new THREE.Group();
-        const dishGeom = new THREE.SphereGeometry(1.2, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.4);
-        const dish = new THREE.Mesh(dishGeom, new THREE.MeshStandardMaterial({ color: 0xf0f0f0, metalness: 0.6, roughness: 0.3, side: THREE.DoubleSide }));
+        const dishGeom = new THREE.SphereGeometry(1.8, 64, 32, 0, Math.PI * 2, 0, Math.PI * 0.45);
+        const dish = new THREE.Mesh(dishGeom, dishMaterial);
+        dish.receiveShadow = true;
         dishGroup.add(dish);
-
-        const feederGeom = new THREE.CylinderGeometry(0.05, 0.05, 0.5, 8);
-        const feeder = new THREE.Mesh(feederGeom, darkMaterial);
-        feeder.position.z = 0.8;
-        feeder.rotation.x = Math.PI / 2;
-        dishGroup.add(feeder);
-        
-        dishGroup.position.y = 1.2;
-        dishGroup.rotation.x = -Math.PI / 6;
+        const feedHorn = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.1, 0.3, 8), accentMaterial);
+        feedHorn.position.z = 1.3;
+        dishGroup.add(feedHorn);
+        for(let i=0; i<3; i++) {
+            const strut = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.8, 6), mainBodyMaterial);
+            strut.position.z = 0.6;
+            strut.rotation.z = Math.PI / 2;
+            strut.rotation.y = (i/3) * Math.PI * 2;
+            dishGroup.add(strut);
+        }
+        dishGroup.position.y = 1.8;
+        dishGroup.rotation.x = -Math.PI / 5;
         satellite.add(dishGroup);
 
-        const solarPanelGroup = new THREE.Group();
-        const armGeom = new THREE.BoxGeometry(0.1, 0.1, 2);
-        const panelGeom = new THREE.BoxGeometry(2, 0.05, 4);
+        function createSolarWing(positionX) {
+            const wing = new THREE.Group();
+            const arm = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.1, 0.1), mainBodyMaterial);
+            arm.position.x = positionX > 0 ? 0.75 : -0.75;
+            wing.add(arm);
+            const panelFrame = new THREE.Mesh(new THREE.BoxGeometry(2.8, 5.2, 0.05), accentMaterial);
+            panelFrame.castShadow = true;
+            const panelCells = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 5.1), solarCellMaterial);
+            panelCells.position.z = 0.03;
+            const panelGroup = new THREE.Group();
+            panelGroup.add(panelFrame, panelCells);
+            panelGroup.position.x = positionX > 0 ? 2.9 : -2.9;
+            wing.add(panelGroup);
+            wing.position.x = positionX > 0 ? 0.8 : -0.8;
+            return wing;
+        }
+        satellite.add(createSolarWing(-1), createSolarWing(1));
 
-        const panel1 = new THREE.Group();
-        const arm1 = new THREE.Mesh(armGeom, silverMaterial);
-        arm1.position.z = 1;
-        const solarWing1 = new THREE.Mesh(panelGeom, solarPanelMaterial);
-        solarWing1.position.z = 3;
-        panel1.add(arm1, solarWing1);
-        panel1.position.x = 1.1;
+        // --- Details and Greebles with Lights ---
+        const omniAntenna = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.5, 6), accentMaterial);
+        omniAntenna.position.set(0.6, -1.5, 0);
+        satellite.add(omniAntenna);
 
-        const panel2 = new THREE.Group();
-        const arm2 = new THREE.Mesh(armGeom, silverMaterial);
-        arm2.position.z = 1;
-        const solarWing2 = new THREE.Mesh(panelGeom, solarPanelMaterial);
-        solarWing2.position.z = 3;
-        panel2.add(arm2, solarWing2);
-        panel2.position.x = -1.1;
-        panel2.rotation.y = Math.PI;
+        const thrusterNozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 0.2, 8), blackAccentMaterial);
+        thrusterNozzle.position.y = -1.7;
+        satellite.add(thrusterNozzle);
 
-        solarPanelGroup.add(panel1, panel2);
-        satellite.add(solarPanelGroup);
+        const sensorPod = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), mainBodyMaterial);
+        sensorPod.position.set(-0.6, 0.5, 0.6);
+        const sensorLens = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), blackAccentMaterial);
+        sensorLens.position.set(-0.6, 0.5, 0.82);
+        satellite.add(sensorPod, sensorLens);
         
-        const thrusterGeom = new THREE.CylinderGeometry(0.4, 0.2, 0.5, 8);
-        const thruster = new THREE.Mesh(thrusterGeom, darkMaterial);
-        thruster.position.y = -1.0;
-        satellite.add(thruster);
+        // Add colorful indicator lights
+        const redLightMat = new THREE.MeshBasicMaterial({ color: 0xff1744, toneMapped: false });
+        const greenLightMat = new THREE.MeshBasicMaterial({ color: 0x00e676, toneMapped: false });
         
-        const engineGlowMaterial = new THREE.MeshBasicMaterial({ color: 0x00eaff, transparent: true, opacity: 1 });
-        const engineGlowGeom = new THREE.SphereGeometry(0.2, 16, 16);
-        const engineGlow = new THREE.Mesh(engineGlowGeom, engineGlowMaterial);
-        engineGlow.position.y = -1.1;
-        satellite.add(engineGlow);
+        const light1 = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), redLightMat);
+        light1.position.set(0.7, 1.0, 0.7);
+        satellite.add(light1);
 
-        satellite.position.set(0, 0, 0);
+        const light2 = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), greenLightMat);
+        light2.position.set(-0.7, 1.0, -0.7);
+        satellite.add(light2);
+        
         satellite.scale.set(1.5, 1.5, 1.5);
         scene.add(satellite);
     }
 
+
     function createStarfield() {
         const starGeometry = new THREE.BufferGeometry();
-        const starMaterial = new THREE.PointsMaterial({ color: 0xeeeeff, size: 0.1, transparent: true, opacity: 0.7 });
+        const starMaterial = new THREE.PointsMaterial({ color: 0xeeeeff, size: 0.1, transparent: true, opacity: 0.8 });
         
         const starPositions = [];
-        for (let i = 0; i < 5000; i++) {
-            starPositions.push((Math.random() - 0.5) * 1000, (Math.random() - 0.5) * 1000, (Math.random() - 0.5) * 1000);
+        for (let i = 0; i < 10000; i++) {
+            const r = 400 + Math.random() * 600;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos((Math.random() * 2) - 1);
+            starPositions.push(
+                r * Math.sin(phi) * Math.cos(theta),
+                r * Math.sin(phi) * Math.sin(theta),
+                r * Math.cos(phi)
+            );
         }
         
         starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
@@ -1010,23 +1105,66 @@
         scene.add(starParticles);
     }
 
-    function createPlanet() {
-        uranusGroup = new THREE.Group();
+    // --- UPDATED: "4K" EARTH CREATION USING HIGH-RESOLUTION TEXTURES ---
+    function createEarth() {
+        earthGroup = new THREE.Group();
+        const earthRadius = 8;
+        const textureLoader = new THREE.TextureLoader();
+
+        // High-resolution sphere geometry
+        const earthGeometry = new THREE.SphereGeometry(earthRadius, 128, 128);
+
+        // Load textures
+        const earthDayMap = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/land_ocean_ice_cloud_2048.jpg');
+        const earthNightMap = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/earth_night_2048.png');
+        const earthBumpMap = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/earth_bump_2048.jpg');
+        const earthSpecMap = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/earth_specular_2048.jpg');
+        const earthCloudMap = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/earth_clouds_2048.png');
+
+        // Main Earth material
+        const earthMaterial = new THREE.MeshPhongMaterial({
+            map: earthDayMap,
+            specularMap: earthSpecMap,
+            specular: new THREE.Color('gray'),
+            shininess: 15,
+            bumpMap: earthBumpMap,
+            bumpScale: 0.1,
+            emissiveMap: earthNightMap,
+            emissive: new THREE.Color(0xffffff),
+            emissiveIntensity: 1.0
+        });
         
-        const planetGeometry = new THREE.SphereGeometry(8, 64, 64);
-        const planetMaterial = new THREE.MeshPhongMaterial({ color: 0x4F92AF, emissive: 0x2E6C8C, emissiveIntensity: 0.2, shininess: 20 });
-        const uranus = new THREE.Mesh(planetGeometry, planetMaterial);
-        uranusGroup.add(uranus);
+        const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
+        earthMesh.receiveShadow = true;
+        earthGroup.add(earthMesh);
 
-        const ringGeometry = new THREE.RingGeometry(10, 12, 64);
-        const ringMaterial = new THREE.MeshBasicMaterial({ color: 0xA0D7F0, side: THREE.DoubleSide, transparent: true, opacity: 0.7 });
-        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-        ring.rotation.x = Math.PI / 2.2;
-        uranusGroup.add(ring);
+        // Cloud layer
+        const cloudGeometry = new THREE.SphereGeometry(earthRadius + 0.1, 128, 128);
+        const cloudMaterial = new THREE.MeshPhongMaterial({
+            map: earthCloudMap,
+            transparent: true,
+            opacity: 0.8,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+        const cloudMesh = new THREE.Mesh(cloudGeometry, cloudMaterial);
+        earthGroup.add(cloudMesh);
+        
+        // Soft blue atmosphere glow
+        const atmosphereGeom = new THREE.SphereGeometry(earthRadius + 0.4, 128, 128);
+        const atmosphereMat = new THREE.ShaderMaterial({
+            uniforms: { 'c': { value: 0.5 }, 'p': { value: 4.0 } },
+            vertexShader: `varying vec3 vNormal; void main() { vNormal = normalize( normalMatrix * normal ); gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }`,
+            fragmentShader: `varying vec3 vNormal; uniform float c; uniform float p; void main() { float intensity = pow( c - dot( vNormal, vec3( 0.0, 0.0, 1.0 ) ), p ); gl_FragColor = vec4( 0.5, 0.7, 1.0, 1.0 ) * intensity; }`,
+            side: THREE.BackSide, blending: THREE.AdditiveBlending, transparent: true
+        });
+        const atmosphere = new THREE.Mesh(atmosphereGeom, atmosphereMat);
+        earthGroup.add(atmosphere);
 
-        uranusGroup.position.set(-40, 0, -60);
-        scene.add(uranusGroup);
+        earthGroup.position.set(5, -10, -40);
+        scene.add(earthGroup);
     }
+
 
     function createJourneyScene() {
         wormholeGroup = new THREE.Group();
@@ -1190,16 +1328,21 @@
         const time = Date.now() * 0.0005;
         if(satellite) {
             satellite.rotation.y += 0.002;
-            satellite.rotation.x = Math.sin(time * 0.7) * 0.1;
-            satellite.position.y = Math.sin(time) * 0.2;
+            satellite.rotation.x = Math.sin(time * 0.7) * 0.05;
+            satellite.position.y = Math.sin(time) * 0.1;
         }
-        if (starParticles) starParticles.rotation.y += 0.0001;
+        if (starParticles) starParticles.rotation.y += 0.00005;
         if (particleNetwork) {
             animateParticleNetwork();
             particleNetwork.points.rotation.y += 0.0002;
             particleNetwork.lineMesh.rotation.y += 0.0002;
         }
-        if (uranusGroup) uranusGroup.rotation.y += 0.0005;
+        if (earthGroup) {
+            // Earth rotation
+            earthGroup.children[0].rotation.y += 0.0005;
+            // Cloud rotation (slightly faster for parallax)
+            earthGroup.children[1].rotation.y += 0.0007;
+        }
 
         if (AppState.mode === 'journey') {
              animateJourney();
@@ -1418,7 +1561,7 @@
         setTimeout(() => journeyUI.classList.remove('opacity-0'), 50);
         document.getElementById('warp-effect').classList.add('active');
 
-        [particleNetwork.points, particleNetwork.lineMesh, uranusGroup].forEach(obj => obj.visible = false);
+        [particleNetwork.points, particleNetwork.lineMesh, earthGroup].forEach(obj => obj.visible = false);
         wormholeGroup.visible = true;
         controls.enabled = false;
         satellite.position.set(0, 0, 0);
@@ -1437,7 +1580,7 @@
         }, 500);
         document.getElementById('warp-effect').classList.remove('active');
 
-        [particleNetwork.points, particleNetwork.lineMesh, uranusGroup].forEach(obj => obj.visible = true);
+        [particleNetwork.points, particleNetwork.lineMesh, earthGroup].forEach(obj => obj.visible = true);
         wormholeGroup.visible = false;
         
         controls.enabled = true;
@@ -1454,13 +1597,13 @@
         document.getElementById('dashboard-controls').classList.add('hidden');
         document.getElementById('inspect-controls').classList.remove('hidden');
 
-        const targetPos = new THREE.Vector3().copy(satellite.position).add(new THREE.Vector3(0, 1, 5));
+        const targetPos = new THREE.Vector3().copy(satellite.position).add(new THREE.Vector3(0, 1, 8));
         const targetLookAt = satellite.position;
         
         animateCamera(targetPos, targetLookAt, 1.5, () => {
             controls.enableZoom = true;
-            controls.minDistance = 3;
-            controls.maxDistance = 10;
+            controls.minDistance = 4;
+            controls.maxDistance = 15;
         });
 
         showNotification("Mode Inspeksi: Putar satelit dengan mouse.");
