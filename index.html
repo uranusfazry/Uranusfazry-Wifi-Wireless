@@ -25,7 +25,7 @@
         
         body {
             margin: 0;
-            overflow: hidden;
+            /* overflow: hidden; -- Dihapus sementara untuk scrolling jika ada iklan */
             font-family: 'Space Grotesk', 'Orbitron', sans-serif;
             background-color: var(--dark);
             color: var(--light);
@@ -377,8 +377,8 @@
             border: 1px solid var(--border-color);
             border-radius: 10px;
             box-shadow: 0 0 15px rgba(var(--glow-color), 0.15), 
-                        0 0 30px rgba(var(--glow-color), 0.1),
-                        inset 0 0 10px rgba(var(--glow-color), 0.1);
+                         0 0 30px rgba(var(--glow-color), 0.1),
+                         inset 0 0 10px rgba(var(--glow-color), 0.1);
             z-index: 9999;
             cursor: pointer;
             user-select: none;
@@ -392,8 +392,8 @@
             transform: translateY(-5px) scale(1.03);
             border-color: rgba(127, 255, 212, 0.8);
             box-shadow: 0 0 25px rgba(var(--glow-color), 0.4), 
-                        0 0 50px rgba(var(--glow-color), 0.25),
-                        inset 0 0 12px rgba(var(--glow-color), 0.2);
+                         0 0 50px rgba(var(--glow-color), 0.25),
+                         inset 0 0 12px rgba(var(--glow-color), 0.2);
         }
 
         #futuristic-watermark.light-mode {
@@ -474,9 +474,116 @@
             text-align: center;
             white-space: nowrap;
         }
+
+        /* --- [START] CSS IKLAN DITAMBAHKAN --- */
+        /* Kontainer untuk Interstitial Ad */
+        #interstitial-ad-container {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(2, 2, 14, 0.9); /* Latar belakang gelap dengan blur */
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        #interstitial-ad-container.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        /* Konten di dalam Interstitial Ad */
+        #interstitial-ad-content {
+            background-color: var(--darker);
+            padding: 1rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 0 40px rgba(0, 234, 255, 0.3);
+            border: 1px solid rgba(0, 234, 255, 0.3);
+            position: relative;
+            max-width: 320px; /* Lebar maksimal konten iklan */
+            width: 90%;
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        #interstitial-ad-container.visible #interstitial-ad-content {
+            transform: scale(1) translateY(0);
+        }
+
+        /* Tombol Close 'X' */
+        #close-interstitial-ad {
+            position: absolute;
+            top: -1.25rem; /* -20px */
+            right: -1.25rem; /* -20px */
+            width: 2.75rem; /* 44px */
+            height: 2.75rem; /* 44px */
+            background: var(--darker);
+            border-radius: 9999px;
+            color: var(--primary);
+            font-size: 1.5rem; /* 24px */
+            line-height: 1;
+            border: 2px solid var(--primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #close-interstitial-ad:hover {
+            background: var(--primary);
+            color: var(--darker);
+            transform: rotate(90deg) scale(1.1);
+            box-shadow: 0 0 15px var(--primary);
+        }
+
+        /* Placeholder untuk Banner Iklan */
+        .ad-placeholder {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 1rem 0;
+            /* background: rgba(0,0,0,0.2);
+            border: 1px dashed rgba(255,255,255,0.2); */
+        }
+        /* --- [END] CSS IKLAN DITAMBAHKAN --- */
     </style>
 </head>
 <body>
+    <!-- [START] Penempatan Iklan Banner 728x90 (Desktop) & 468x60 (Tablet) -->
+    <div class="ad-placeholder w-full py-2 flex justify-center">
+        <div class="hidden lg:block">
+            <script type="text/javascript">
+                atOptions = {
+                    'key' : '4d634fb0d827c928ecc1ced49436630e',
+                    'format' : 'iframe',
+                    'height' : 90,
+                    'width' : 728,
+                    'params' : {}
+                };
+            </script>
+            <script type="text/javascript" src="//librarysituation.com/4d634fb0d827c928ecc1ced49436630e/invoke.js"></script>
+        </div>
+        <div class="hidden sm:block lg:hidden">
+            <script type="text/javascript">
+                atOptions = {
+                    'key' : '871b1b2b3b19dbe2a2fa635e8d171f57',
+                    'format' : 'iframe',
+                    'height' : 60,
+                    'width' : 468,
+                    'params' : {}
+                };
+            </script>
+            <script type="text/javascript" src="//librarysituation.com/871b1b2b3b19dbe2a2fa635e8d171f57/invoke.js"></script>
+        </div>
+    </div>
+    <!-- [END] Penempatan Iklan Banner -->
+
     <!-- Boot Screen -->
     <div id="boot-screen" class="fixed top-0 left-0 w-full h-full bg-darker z-[2000] flex flex-col items-center justify-center transition-opacity duration-1000 ease-in-out">
         <div class="text-center p-4">
@@ -582,7 +689,7 @@
                     </button>
                 </div>
             </div>
-            <!-- Journey Progress -->
+             <!-- Journey Progress -->
             <div id="journey-progress-container" class="hidden opacity-0 flex flex-col gap-4">
                  <div class="flex justify-between items-center">
                     <div class="text-sm font-medium">BOOST PROGRESS</div>
@@ -598,7 +705,7 @@
                     </button>
                  </div>
             </div>
-            <!-- Inspect Controls -->
+             <!-- Inspect Controls -->
             <div id="inspect-controls" class="hidden flex flex-col gap-4">
                 <div class="flex justify-between items-center">
                     <div class="text-sm font-medium">MODE INSPEKSI</div>
@@ -611,7 +718,7 @@
                     </button>
                 </div>
             </div>
-            <!-- Solar System Controls -->
+             <!-- Solar System Controls -->
             <div id="solar-system-controls" class="hidden flex flex-col gap-4">
                 <div class="flex justify-between items-center">
                     <div class="text-sm font-medium">KONTROL SIMULASI</div>
@@ -655,38 +762,75 @@
 
     <!-- Modals -->
     <div id="packagesModal" class="modal">
-        <div class="modal-content max-w-lg">
+        <div class="modal-content max-w-4xl">
             <button class="close-modal" data-modal="packagesModal">&times;</button>
             <h2 class="text-xl font-bold mb-4 neon-text">PILIH PAKET ANDA</h2>
             
-            <div class="package-card">
-                 <div class="package-content">
-                    <h3 class="font-bold text-lg text-cyan-300">Paket Internet Wireless Basic</h3>
-                    <p class="text-sm opacity-80 mb-2">Ideal untuk kebutuhan internet harian dan keluarga kecil.</p>
-                    <p class="text-2xl font-bold mb-2">Rp 300.000<span class="text-sm">/bulan</span></p>
-                    <ul class="text-xs list-disc pl-5 mb-4 space-y-1">
-                        <li>Kecepatan hingga 20 Mbps</li>
-                        <li>Kuota 500 GB</li>
-                        <li>Kapasitas Pengguna: Maksimal 5 orang</li>
-                    </ul>
-                    <button onclick="window.open('https://wa.me/6287872521809?text=Halo%2C%20saya%20tertarik%20dengan%20Paket%20Internet%20Wireless%20Basic%20seharga%20Rp%20300.000%2Fbulan.', '_blank')" class="primary-btn w-full">Pilih Paket Ini</button>
+            <div class="flex flex-col md:flex-row gap-4">
+                <!-- Kolom Paket -->
+                <div class="flex-grow">
+                     <div class="package-card">
+                         <div class="package-content">
+                            <h3 class="font-bold text-lg text-cyan-300">Paket Internet Wireless Basic</h3>
+                            <p class="text-sm opacity-80 mb-2">Ideal untuk kebutuhan internet harian dan keluarga kecil.</p>
+                            <p class="text-2xl font-bold mb-2">Rp 300.000<span class="text-sm">/bulan</span></p>
+                            <ul class="text-xs list-disc pl-5 mb-4 space-y-1">
+                                <li>Kecepatan hingga 20 Mbps</li>
+                                <li>Kuota 500 GB</li>
+                                <li>Kapasitas Pengguna: Maksimal 5 orang</li>
+                            </ul>
+                            <button onclick="window.open('https://wa.me/6287872521809?text=Halo%2C%20saya%20tertarik%20dengan%20Paket%20Internet%20Wireless%20Basic%20seharga%20Rp%20300.000%2Fbulan.', '_blank')" class="primary-btn w-full">Pilih Paket Ini</button>
+                        </div>
+                    </div>
+
+                    <div class="package-card package-card-premium">
+                        <div class="vip-badge"><i class="fas fa-crown"></i> VIP CHOICE</div>
+                        <div class="package-content">
+                            <h3 class="font-bold text-lg text-secondary">Paket Internet Wireless Premium</h3>
+                            <p class="text-sm opacity-80 mb-2">Koneksi untuk streaming, gaming, dan banyak pengguna.</p>
+                            <p class="text-2xl font-bold mb-2">Rp 400.000<span class="text-sm">/bulan</span></p>
+                            <ul class="text-xs list-disc pl-5 mb-4 space-y-1">
+                                <li>Kecepatan hingga 30 Mbps</li>
+                                <li>Kuota 500 GB</li>
+                                <li>Kapasitas Pengguna: Maksimal 10 orang</li>
+                            </ul>
+                            <button onclick="window.open('https://wa.me/6287872521809?text=Halo%2C%20saya%20tertarik%20dengan%20Paket%20Internet%20Wireless%20Premium%20seharga%20Rp%20400.000%2Fbulan.', '_blank')" class="primary-btn w-full">Pilih Paket Ini</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Kolom Iklan Banner Vertikal -->
+                <div class="hidden md:flex flex-col gap-4 items-center">
+                     <!-- [START] Penempatan Iklan Banner 160x600 (Desktop) -->
+                     <div class="ad-placeholder">
+                         <script type="text/javascript">
+                            atOptions = {
+                                'key' : 'd5bd6df0014b85dfbde6211b641d960c',
+                                'format' : 'iframe',
+                                'height' : 600,
+                                'width' : 160,
+                                'params' : {}
+                            };
+                        </script>
+                        <script type="text/javascript" src="//librarysituation.com/d5bd6df0014b85dfbde6211b641d960c/invoke.js"></script>
+                     </div>
+                     <!-- [END] Penempatan Iklan Banner -->
                 </div>
             </div>
 
-            <div class="package-card package-card-premium">
-                <div class="vip-badge"><i class="fas fa-crown"></i> VIP CHOICE</div>
-                <div class="package-content">
-                    <h3 class="font-bold text-lg text-secondary">Paket Internet Wireless Premium</h3>
-                    <p class="text-sm opacity-80 mb-2">Koneksi untuk streaming, gaming, dan banyak pengguna.</p>
-                    <p class="text-2xl font-bold mb-2">Rp 400.000<span class="text-sm">/bulan</span></p>
-                    <ul class="text-xs list-disc pl-5 mb-4 space-y-1">
-                        <li>Kecepatan hingga 30 Mbps</li>
-                        <li>Kuota 500 GB</li>
-                        <li>Kapasitas Pengguna: Maksimal 10 orang</li>
-                    </ul>
-                    <button onclick="window.open('https://wa.me/6287872521809?text=Halo%2C%20saya%20tertarik%20dengan%20Paket%20Internet%20Wireless%20Premium%20seharga%20Rp%20400.000%2Fbulan.', '_blank')" class="primary-btn w-full">Pilih Paket Ini</button>
-                </div>
+             <!-- [START] Penempatan Iklan Banner 320x50 (Mobile) -->
+             <div class="ad-placeholder sm:hidden">
+                 <script type="text/javascript">
+                    atOptions = {
+                        'key' : '1ab5ac4727cfb61eec1ea8e059acd0c4',
+                        'format' : 'iframe',
+                        'height' : 50,
+                        'width' : 320,
+                        'params' : {}
+                    };
+                </script>
+                <script type="text/javascript" src="//librarysituation.com/1ab5ac4727cfb61eec1ea8e059acd0c4/invoke.js"></script>
             </div>
+             <!-- [END] Penempatan Iklan Banner -->
         </div>
     </div>
 
@@ -711,6 +855,14 @@
             <button class="close-modal" data-modal="aboutModal">&times;</button>
             <h2 class="text-xl font-bold mb-4 neon-text">TENTANG URANUS FAZRY</h2>
             <p class="text-sm mb-2">Uranus Fazry lahir dari visi untuk menyediakan layanan internet wireless berkecepatan tinggi dan solusi digital (aplikasi/website) yang stabil serta terjangkau bagi semua. Kami memanfaatkan teknologi nirkabel terkini yang dapat diakses langsung dari berbagai lokasi tanpa perlu kabel fisik, sehingga koneksi tetap cepat dan andal.</p>
+            
+            <!-- [START] Penempatan Iklan Native Banner -->
+            <div class="my-4">
+                <script async="async" data-cfasync="false" src="//librarysituation.com/a21d44e46fe99d764c057d630f6b6e14/invoke.js"></script>
+                <div id="container-a21d44e46fe99d764c057d630f6b6e14"></div>
+            </div>
+            <!-- [END] Penempatan Iklan Native Banner -->
+
             <p class="text-sm mb-4">Misi kami adalah menghubungkan setiap rumah dan bisnis di Indonesia ke dunia digital tanpa batas, dengan kemudahan akses internet di mana saja, seolah berselancar di seluruh alam semesta.</p>
             <div class="border-t border-gray-700 pt-4 mt-4">
                  <p class="text-xs opacity-80">© 2025 Uranus WIFI | Wireless Internet Network</p>
@@ -744,7 +896,7 @@
                         </div>
                          <div class="flex justify-center items-center pt-4">
                             <i id="other-buffer-icon" class="fas fa-sync-alt text-3xl text-red-500 opacity-0 buffering-icon"></i>
-                        </div>
+                         </div>
                     </div>
                 </div>
                 <!-- Panel Uranus WIFI -->
@@ -775,7 +927,31 @@
         </div>
     </div>
 
+    <!-- [START] Full Screen Interstitial Ad -->
+    <div id="interstitial-ad-container">
+        <div id="interstitial-ad-content">
+            <button id="close-interstitial-ad">&times;</button>
+            <div class="ad-placeholder text-center">
+                <!-- Penempatan Iklan 300x250 -->
+                <script type="text/javascript">
+                    atOptions = {
+                        'key' : 'b37378960baa39f07cd865cff09c19a6',
+                        'format' : 'iframe',
+                        'height' : 250,
+                        'width' : 300,
+                        'params' : {}
+                    };
+                </script>
+                <script type="text/javascript" src="//librarysituation.com/b37378960baa39f07cd865cff09c19a6/invoke.js"></script>
+            </div>
+        </div>
+    </div>
+    <!-- [END] Full Screen Interstitial Ad -->
+
+
 <script>
+    // --- KODE WEBSITE ASLI (TIDAK DIUBAH) ---
+    // ... (Semua JavaScript asli dari website Anda ditempatkan di sini)
     // --- GLOBAL STATE & VARIABLES ---
     const AppState = {
         mode: 'dashboard', 
@@ -2028,6 +2204,48 @@
     }
   })();
 </script>
+
+<!-- [START] SCRIPT IKLAN DITAMBAHKAN -->
+
+<!-- 1. Popunder Ad Script -->
+<script type='text/javascript' src='//librarysituation.com/b4/b8/93/b4b8938fc1c6921973fe071241bfa0ea.js'></script>
+
+<!-- 2. Social Bar Ad Script -->
+<script type='text/javascript' src='//librarysituation.com/ca/da/c9/cadac9ed1608e70a1036cd4ced59c94e.js'></script>
+
+<!-- 3. Full Screen Interstitial Ad Logic -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const adContainer = document.getElementById('interstitial-ad-container');
+    const closeAdButton = document.getElementById('close-interstitial-ad');
+
+    // Cek jika iklan sudah pernah ditampilkan di sesi ini
+    if (!sessionStorage.getItem('interstitialShown')) {
+        // Tampilkan iklan setelah delay singkat agar tidak terlalu mengagetkan
+        setTimeout(() => {
+            adContainer.classList.add('visible');
+            // Tandai bahwa iklan sudah ditampilkan
+            sessionStorage.setItem('interstitialShown', 'true');
+        }, 1500); // Tampil setelah 1.5 detik
+    }
+
+    // Fungsi untuk menutup iklan
+    function closeAd() {
+        adContainer.classList.remove('visible');
+    }
+
+    // Event listener untuk tombol close
+    closeAdButton.addEventListener('click', closeAd);
+
+    // (Opsional) Menutup iklan jika user menekan tombol 'Escape'
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && adContainer.classList.contains('visible')) {
+            closeAd();
+        }
+    });
+});
+</script>
+<!-- [END] SCRIPT IKLAN DITAMBAHKAN -->
+
 </body>
 </html>
-
